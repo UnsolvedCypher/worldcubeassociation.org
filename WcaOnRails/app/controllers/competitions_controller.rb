@@ -10,11 +10,14 @@ class CompetitionsController < ApplicationController
     :show_podiums,
     :show_all_results,
     :show_results_by_person,
+    :show_events,
+  ]
+  before_action -> { redirect_to_root_unless_user(:can_admin_competitions?) }, only: [
+    :post_announcement,
+    :admin_edit,
   ]
   before_action -> { redirect_to_root_unless_user(:can_admin_results?) }, only: [
-    :post_announcement,
     :post_results,
-    :admin_edit,
   ]
 
   private def competition_from_params(includes: nil)
@@ -25,9 +28,11 @@ class CompetitionsController < ApplicationController
     end
   end
 
-  before_action -> { redirect_to_root_unless_user(:can_manage_competition?, competition_from_params) }, only: [:edit, :update, :edit_events, :update_events, :payment_setup]
+  before_action -> { redirect_to_root_unless_user(:can_manage_competition?, competition_from_params) }, only: [:edit, :update, :edit_events, :edit_schedule, :update_events, :update_events_from_wcif, :payment_setup]
 
   before_action -> { redirect_to_root_unless_user(:can_create_competitions?) }, only: [:new, :create]
+
+  before_action -> { redirect_to_root_unless_user(:can_view_senior_delegate_material?) }, only: [:for_senior]
 
   def new
     @competition = Competition.new
@@ -74,7 +79,7 @@ class CompetitionsController < ApplicationController
     @recent_selected = params[:state] == "recent"
     @custom_selected = params[:state] == "custom"
 
-    @years = ["all years"] + Competition.where(showAtAll: true).pluck(:year).uniq.select { |y| y <= Date.today.year }.sort!.reverse!
+    @years = ["all years"] + Competition.non_future_years
 
     if params[:delegate].present?
       delegate = User.find(params[:delegate])
@@ -82,7 +87,7 @@ class CompetitionsController < ApplicationController
     else
       @competitions = Competition
     end
-    @competitions = @competitions.includes(:country).where(showAtAll: true).order(:start_date)
+    @competitions = @competitions.includes(:country).where(showAtAll: true).order_by_date
 
     if @present_selected
       @competitions = @competitions.not_over
@@ -92,8 +97,8 @@ class CompetitionsController < ApplicationController
       from_date = Date.safe_parse(params[:from_date])
       to_date = Date.safe_parse(params[:to_date])
       if from_date || to_date
-        @competitions = @competitions.where("start_date >= ?", from_date) if from_date
-        @competitions = @competitions.where("end_date <= ?", to_date) if to_date
+        @competitions = @competitions.where("start_date <= ?", to_date) if to_date
+        @competitions = @competitions.where("end_date >= ?", from_date) if from_date
       else
         @competitions = Competition.none
       end
@@ -147,6 +152,9 @@ class CompetitionsController < ApplicationController
 
     if @competition.save
       flash[:success] = t('competitions.messages.create_success')
+      @competition.organizers.each do |organizer|
+        CompetitionsMailer.notify_organizer_of_addition_to_competition(current_user, @competition, organizer).deliver_later
+      end
       redirect_to edit_competition_path(@competition)
     else
       # Show id errors under name, since we don't actually show an
@@ -165,52 +173,119 @@ class CompetitionsController < ApplicationController
     else
       render 'posts/new'
     end
+    @post
   end
+
+  private def editable_post_fields
+    [:title, :body, :sticky, :tags, :show_on_homepage]
+  end
+  helper_method :editable_post_fields
 
   def post_announcement
     I18n.with_locale :en do
       comp = Competition.find(params[:id])
       date_range_str = wca_date_range(comp.start_date, comp.end_date, format: :long)
-      title = "#{comp.name} on #{date_range_str} in #{comp.cityName}, #{comp.countryId}"
+      title = "#{comp.name} on #{date_range_str} in #{comp.cityName}, #{comp.country.name}"
 
       body = "The [#{comp.name}](#{competition_url(comp)})"
-      body += " will take place on #{date_range_str} in #{comp.cityName}, #{comp.countryId}."
+      body += " will take place on #{date_range_str} in #{comp.cityName}, #{comp.country.name}."
       unless comp.website.blank?
         body += " Check out the [#{comp.name} website](#{comp.website}) for more information and registration."
       end
-      create_post_and_redirect(title: title, body: body, author: current_user, world_readable: true)
+      @full_post = create_post_and_redirect(title: title, body: body, author: current_user, tags: "competitions,new", world_readable: true)
+      @competition = competition_from_params
+      CompetitionsMailer.notify_organizers_of_announced_competition(@competition, @full_post).deliver_later
 
       comp.update!(announced_at: Time.now)
     end
   end
 
+  private def pretty_print_result(result, short: false)
+    event = result.event
+    sort_by = result.format.sort_by
+
+    # If the format for this round was to sort by average, but this particular
+    # result did not achieve an average, then switch to "best", and do not allow
+    # a short format (to make it clear what happened).
+    if sort_by == "average" && result.to_solve_time(:average).incomplete?
+      sort_by = "single"
+      short = false
+    end
+
+    solve_time = nil
+    a_win_by_word = nil
+    case sort_by
+    when "single"
+      solve_time = result.to_solve_time(:best)
+      if event.multiple_blindfolded?
+        a_win_by_word = "a result"
+      else
+        a_win_by_word = "a single solve"
+      end
+    when "average"
+      solve_time = result.to_solve_time(:average)
+      a_win_by_word = result.format.id == "a" ? "an average" : "a mean"
+    else
+      raise "Unrecognized sort_by #{sort_by}"
+    end
+
+    if short
+      solve_time.clock_format
+    else
+      "with #{a_win_by_word} of #{solve_time.clock_format_with_units}"
+    end
+  end
+
+  private def people_to_sentence(results, link:)
+    results
+      .sort_by(&:personName)
+      .map do |result|
+        link ? "[#{result.personName}](#{person_url result.personId})" : result.personName
+      end
+      .to_sentence
+  end
+
   def post_results
+    if ComputeAuxiliaryData.in_progress?
+      flash[:warning] = "Please wait until auxiliary data is computed."
+      return redirect_to admin_edit_competition_path(competition_from_params)
+    end
+
     I18n.with_locale :en do
       comp = Competition.find(params[:id])
       unless comp.results
-        render html: "<div class='container'><div class='alert alert-warning'>No results</div></div>".html_safe
-        return
+        return render html: "<div class='container'><div class='alert alert-warning'>No results</div></div>".html_safe
       end
 
-      top333 = comp.results.where(eventId: '333', roundTypeId: ['f', 'c']).order(:pos).limit(3)
-      if top333.empty? # If there was no 3x3x3 event.
-        title = "Results of #{comp.name}, in #{comp.cityName}, #{comp.countryId} posted"
+      event = Event.c_find(params[:event_id])
+      if event.nil?
+        title = "Results of #{comp.name}, in #{comp.cityName}, #{comp.country.name} posted"
         body = "Results of the [#{comp.name}](#{competition_url(comp)}) are now available.\n\n"
       else
-        title = "#{top333.first.personName} wins #{comp.name}, in #{comp.cityName}, #{comp.countryId}"
+        top_three = comp.results.where(event: event).podium.order(:pos)
+        if top_three.empty?
+          return render html: "<div class='container'><div class='alert alert-warning'>Nobody competed in event: #{event.id}</div></div>".html_safe
+        else
+          results_by_place = top_three.group_by(&:pos)
+          winners = results_by_place[1]
 
-        body = "[#{top333.first.personName}](#{person_url top333.first.personId})"
-        body += " won the [#{comp.name}](#{competition_url(comp)})"
-        body += " with an average of #{top333.first.to_s :average} seconds"
+          title = "#{people_to_sentence(winners, link: false)} #{winners.length > 1 ? "win" : "wins"} " \
+                  "#{comp.name}, in #{comp.cityName}, #{comp.country.name}"
 
-        if top333.length > 1
-          body += ". [#{top333.second.personName}](#{person_url top333.second.personId}) finished second (#{top333.second.to_s :average})"
-          if top333.length > 2
-            body += " and [#{top333.third.personName}](#{person_url top333.third.personId}) finished third (#{top333.third.to_s :average})"
+          body = "#{people_to_sentence(winners, link: true)} won the [#{comp.name}](#{competition_url(comp)})" \
+                 " #{pretty_print_result(winners.first)}" # If there are more winners then their results are the same.
+          body += " in the #{event.name} event" if event.id != "333"
+          body += "."
+          if results_by_place[2]
+            body += " #{people_to_sentence(results_by_place[2], link: true)} finished second (#{pretty_print_result(top_three.second, short: true)})"
+            body += results_by_place[3] ? " and" : "."
           end
+          if results_by_place[3]
+            body += " #{people_to_sentence(results_by_place[3], link: true)} finished third (#{pretty_print_result(top_three.third, short: true)})"
+            body += "."
+          end
+          body += "\n\n"
         end
-
-        body += ".\n\n"
       end
 
       [
@@ -251,7 +326,7 @@ class CompetitionsController < ApplicationController
                 end
                 record_strs
               end.flatten
-              "#{uniqueName} #{record_strs.join(", ")}"
+              "#{uniqueName}&lrm; #{record_strs.join(", ")}"
             end
           end
           body += "#{record_strs.join(", ")}.  \n" # Trailing spaces for markdown give us a <br>
@@ -260,16 +335,24 @@ class CompetitionsController < ApplicationController
       comp.update!(results_posted_at: Time.now)
       comp.competitor_users.each { |user| user.notify_of_results_posted(comp) }
       comp.registrations.accepted.each { |registration| registration.user.notify_of_id_claim_possibility(comp) }
-      create_post_and_redirect(title: title, body: body, author: current_user, world_readable: true)
+      create_post_and_redirect(title: title, body: body, author: current_user, tags: "results", world_readable: true)
     end
   end
 
+  def show_events
+    @competition = competition_from_params(includes: [:events, competition_events: { rounds: [:format, :competition_event] }])
+  end
+
   def edit_events
-    @competition = competition_from_params(includes: [:events])
+    @competition = competition_from_params(includes: [:events, competition_events: { rounds: [:competition_event] }])
+  end
+
+  def edit_schedule
+    @competition = competition_from_params(includes: [competition_events: { rounds: { competition_event: [:event] } }, competition_venues: { venue_rooms: { schedule_activities: [:child_activities] } }])
   end
 
   def update_events
-    @competition = competition_from_params(includes: [:events])
+    @competition = competition_from_params
     if @competition.update_attributes(competition_params)
       flash[:success] = t('.update_success')
       redirect_to edit_events_path(@competition)
@@ -280,7 +363,7 @@ class CompetitionsController < ApplicationController
 
   def get_nearby_competitions(competition)
     nearby_competitions = competition.nearby_competitions(Competition::NEARBY_DAYS_WARNING, Competition::NEARBY_DISTANCE_KM_WARNING)[0, 10]
-    nearby_competitions.select!(&:isConfirmed?) unless current_user.can_view_hidden_competitions?
+    nearby_competitions.select!(&:confirmed?) unless current_user.can_view_hidden_competitions?
     nearby_competitions
   end
 
@@ -351,7 +434,7 @@ class CompetitionsController < ApplicationController
   def nearby_competitions
     @competition = Competition.new(competition_params)
     @competition.valid? # We only unpack dates _just before_ validation, so we need to call validation here
-    @competition_admin_view = params.key?(:competition_admin_view) && current_user.can_admin_results?
+    @competition_admin_view = params.key?(:competition_admin_view) && current_user.can_admin_competitions?
     @nearby_competitions = get_nearby_competitions(@competition)
     render partial: 'nearby_competitions'
   end
@@ -359,7 +442,7 @@ class CompetitionsController < ApplicationController
   def time_until_competition
     @competition = Competition.new(competition_params)
     @competition.valid? # We only unpack dates _just before_ validation, so we need to call validation here
-    @competition_admin_view = params.key?(:competition_admin_view) && current_user.can_admin_results?
+    @competition_admin_view = params.key?(:competition_admin_view) && current_user.can_admin_competitions?
     render json: {
       has_date_errors: @competition.has_date_errors?,
       html: render_to_string(partial: 'time_until_competition'),
@@ -367,7 +450,28 @@ class CompetitionsController < ApplicationController
   end
 
   def show
-    @competition = competition_from_params
+    associations = {
+      competition_venues: {
+        venue_rooms: [:schedule_activities],
+      },
+      # FIXME: this part is triggerred by the competition menu generator when generating the psychsheet event list, should we care?
+      competition_events: {
+        # NOTE: we hit this association through competition.has_fees?, which then calls 'has_fee?' on each competition_event, which then use the competition to get the currency.
+        competition: [],
+        event: [],
+        # NOTE: we eventually hit the rounds->competition->competition_event in the TimeLimit 'to_s' method when having cumulative limit across rounds
+        rounds: {
+          competition: { rounds: [:competition_event] },
+          competition_event: [],
+          format: [],
+        },
+      },
+      rounds: {
+        # Used by TimeLimit, but this is a weird includes...
+        competition: { rounds: [:competition_event] },
+      },
+    }
+    @competition = competition_from_params(includes: associations)
   end
 
   def show_podiums
@@ -384,11 +488,14 @@ class CompetitionsController < ApplicationController
 
   def update
     @competition = competition_from_params
-    @competition_admin_view = params.key?(:competition_admin_view) && current_user.can_admin_results?
+    @competition_admin_view = params.key?(:competition_admin_view) && current_user.can_admin_competitions?
     @competition_organizer_view = !@competition_admin_view
 
     comp_params_minus_id = competition_params
     new_id = comp_params_minus_id.delete(:id)
+
+    old_organizers = @competition.organizers.to_a
+
     if params[:commit] == "Delete"
       cannot_delete_competition_reason = current_user.get_cannot_delete_competition_reason(@competition)
       if cannot_delete_competition_reason
@@ -400,7 +507,6 @@ class CompetitionsController < ApplicationController
         redirect_to root_url
       end
     elsif @competition.update_attributes(comp_params_minus_id)
-
       if new_id && !@competition.update_attributes(id: new_id)
         # Changing the competition id breaks all our associations, and our view
         # code was not written to handle this. Rather than trying to update our view
@@ -410,8 +516,20 @@ class CompetitionsController < ApplicationController
         @competition = Competition.find(params[:id])
       end
 
+      new_organizers = @competition.organizers - old_organizers
+      removed_organizers = old_organizers - @competition.organizers
+
+      new_organizers.each do |new_organizer|
+        CompetitionsMailer.notify_organizer_of_addition_to_competition(current_user, @competition, new_organizer).deliver_later
+      end
+
+      removed_organizers.each do |removed_organizer|
+        CompetitionsMailer.notify_organizer_of_removal_from_competition(current_user, @competition, removed_organizer).deliver_later
+      end
+
       if params[:commit] == "Confirm"
-        CompetitionsMailer.notify_board_of_confirmed_competition(current_user, @competition).deliver_later
+        CompetitionsMailer.notify_wcat_of_confirmed_competition(current_user, @competition).deliver_later
+        CompetitionsMailer.notify_organizers_of_confirmed_competition(current_user, @competition).deliver_later
         flash[:success] = t('.confirm_success')
       else
         flash[:success] = t('.save_success')
@@ -428,12 +546,26 @@ class CompetitionsController < ApplicationController
   end
 
   def my_competitions
-    competitions = (current_user.delegated_competitions + current_user.organized_competitions + current_user.competitions_registered_for)
+    competition_ids = current_user.organized_competitions.pluck(:competition_id)
+    competition_ids.concat(current_user.delegated_competitions.pluck(:competition_id))
+    registrations = current_user.registrations.includes(:competition).accepted.reject { |r| r.competition.results_posted? }
+    registrations.concat(current_user.registrations.includes(:competition).pending.select { |r| r.competition.upcoming? })
+    @registered_for_by_competition_id = Hash[registrations.uniq.map do |r|
+      [r.competition.id, r]
+    end]
+    competition_ids.concat(@registered_for_by_competition_id.keys)
     if current_user.person
-      competitions += current_user.person.competitions
+      competition_ids.concat(current_user.person.competitions.pluck(:competitionId))
     end
-    competitions = competitions.uniq.sort_by { |comp| comp.start_date || Date.today + 20.year }.reverse
+    competitions = Competition.includes(:delegate_report, :delegates)
+                              .where(id: competition_ids.uniq)
+                              .sort_by { |comp| comp.start_date || Date.today + 20.year }.reverse
     @past_competitions, @not_past_competitions = competitions.partition(&:is_probably_over?)
+  end
+
+  def for_senior
+    @user = User.includes(subordinate_delegates: { delegated_competitions: [:delegates, :delegate_report] }).find_by_id(params[:user_id] || current_user.id)
+    @competitions = @user.subordinate_delegates.map(&:delegated_competitions).flatten.uniq.reject(&:is_probably_over?).sort_by { |c| c.start_date || Date.today + 20.year }.reverse
   end
 
   private def competition_params
@@ -446,6 +578,11 @@ class CompetitionsController < ApplicationController
       :enable_donations,
       :being_cloned_from_id,
       :clone_tabs,
+      :refund_policy_limit_date,
+      :regulation_z1,
+      :regulation_z1_reason,
+      :regulation_z3,
+      :regulation_z3_reason,
     ]
 
     if @competition.nil? || @competition.can_edit_registration_fees?
@@ -455,12 +592,13 @@ class CompetitionsController < ApplicationController
       ]
     end
 
-    if @competition&.isConfirmed? && !current_user.can_admin_results?
+    if @competition&.confirmed? && !current_user.can_admin_competitions?
       # If the competition is confirmed, non admins are not allowed to change anything.
     else
       permitted_competition_params += [
         :id,
         :name,
+        :name_reason,
         :cellName,
         :countryId,
         :cityName,
@@ -481,11 +619,18 @@ class CompetitionsController < ApplicationController
         :competitor_limit,
         :competitor_limit_reason,
         :remarks,
+        :extra_registration_requirements,
+        :on_the_spot_registration,
+        :on_the_spot_entry_fee_lowest_denomination,
+        :refund_policy_percent,
+        :refund_policy_limit_date,
+        :guests_entry_fee_lowest_denomination,
         competition_events_attributes: [:id, :event_id, :_destroy],
+        championships_attributes: [:id, :championship_type, :_destroy],
       ]
-      if current_user.can_admin_results?
+      if current_user.can_admin_competitions?
         permitted_competition_params += [
-          :isConfirmed,
+          :confirmed,
           :showAtAll,
         ]
       end
@@ -493,7 +638,7 @@ class CompetitionsController < ApplicationController
 
     params.require(:competition).permit(*permitted_competition_params).tap do |competition_params|
       if params[:commit] == "Confirm" && current_user.can_confirm_competition?(@competition)
-        competition_params[:isConfirmed] = true
+        competition_params[:confirmed] = true
       end
       competition_params[:editing_user_id] = current_user.id
     end

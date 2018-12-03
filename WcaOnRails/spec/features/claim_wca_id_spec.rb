@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.feature "Claim WCA ID" do
-  let!(:user) { FactoryGirl.create(:user) }
-  let!(:person) { FactoryGirl.create(:person_who_has_competed_once, year: 1988, month: 2, day: 3) }
-  let!(:person_without_dob) { FactoryGirl.create :person, year: 0, month: 0, day: 0 }
+  let!(:user) { FactoryBot.create(:user) }
+  let!(:person) { FactoryBot.create(:person_who_has_competed_once, year: 1988, month: 2, day: 3) }
+  let!(:person_without_dob) { FactoryBot.create :person, year: 0, month: 0, day: 0 }
 
   context 'when signed in as user without wca id', js: true do
     before :each do
@@ -19,12 +19,8 @@ RSpec.feature "Claim WCA ID" do
       # field.
       expect(page.find("div.user_dob_verification", visible: false).visible?).to eq false
 
-      selectize_input = page.find("div.user_unconfirmed_wca_id .selectize-control input")
-      selectize_input.native.send_key(person.wca_id)
-      # Wait for selectize popup to appear.
-      expect(page).to have_selector("div.selectize-dropdown", visible: true)
-      # Select item with selectize.
-      page.find("div.user_unconfirmed_wca_id input").native.send_key(:return)
+      # Fill in WCA ID.
+      fill_in_selectize "WCA ID", with: person.wca_id
 
       # Wait for select delegate area to load via ajax.
       expect(page.find("#select-nearby-delegate-area")).to have_content "In order to assign you your WCA ID"
@@ -56,12 +52,7 @@ RSpec.feature "Claim WCA ID" do
     it 'tells you to contact Results team if your WCA ID does not have a birthdate' do
       visit "/profile/claim_wca_id"
 
-      selectize_input = page.find("div.user_unconfirmed_wca_id .selectize-control input")
-      selectize_input.native.send_key(person_without_dob.wca_id)
-      # Wait for selectize popup to appear.
-      expect(page).to have_selector("div.selectize-dropdown", visible: true)
-      # Select item with selectize.
-      page.find("div.user_unconfirmed_wca_id input").native.send_key(:return)
+      fill_in_selectize "WCA ID", with: person_without_dob.wca_id
 
       expect(page.find("#select-nearby-delegate-area")).to have_content "WCA ID #{person_without_dob.wca_id} does not have a birthdate assigned. Please contact the WCA Results Team to resolve this."
     end

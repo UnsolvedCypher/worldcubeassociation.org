@@ -33,7 +33,7 @@ function showDescription () {
   echo "</ul>\n\n";
 
   echo "<p><span style='color:#F00;font-weight:bold'>Note:</span>I don't show more than 20 unfinished persons at once, so you might have to repeat checking and fixing a few times until there are no unfinished persons left.</p>\n";
-  
+
   echo "<hr />\n";
 }
 
@@ -60,14 +60,18 @@ function getPersons () {
   global $personsFromPersons, $personsFromResultsWithoutId;
 
   $personsFromResultsWithoutId = [];
+  // when we are spliting wca profile, the person has an empty personId
+  // when we are uploading results, the person has an digit only personId
   $persons = dbQueryHandle("
-    SELECT DISTINCT personName, Results.countryId, year
+    SELECT personName, Results.countryId, year, Results.personId, Results.competitionId, InboxPersons.dob
     FROM Results
-    JOIN Competitions ON Competitions.id=Results.competitionId
-    WHERE personId=''
+    LEFT JOIN Competitions ON Competitions.id=Results.competitionId
+    LEFT JOIN InboxPersons ON InboxPersons.id=Results.personId and InboxPersons.competitionId=Results.competitionId
+    WHERE personId='' OR personId REGEXP '^[0-9]+$'
+    GROUP BY Results.personId, Results.personName, Results.competitionId
     ORDER BY personName
   ");
-  while( $row = mysql_fetch_row( $persons ))
+  while( $row = mysql_fetch_array( $persons ))
     $personsFromResultsWithoutId[] = $row;
   mysql_free_result( $persons );
 
@@ -99,9 +103,9 @@ function getBirthdates () {
     foreach( $persons as $person ){
       extract( $person );
       $birthdates[$id] = ($month || $day || $year)
-                         ? ($month ? sprintf("%02d",$month) : '??'  ) . '/' .
-                           ($day   ? sprintf("%02d",$day  ) : '??'  ) . '/' .
-                           ($year  ? sprintf("%02d",$year ) : '????')
+                         ? ($year  ? sprintf("%02d",$year ) : '????') . '-' .
+                           ($month ? sprintf("%02d",$month) : '??'  ) . '-' .
+                           ($day   ? sprintf("%02d",$day  ) : '??'  )
                          : 'unknown';
     }
     $birthdates[''] = 'unknown';
@@ -130,8 +134,10 @@ function showUnfinishedPersons () {
   $caseNr = 0;
   $availableSpots = array(); // array of semiIds in progress
   foreach( $personsFromResultsWithoutId as $person ){
-    list( $name, $countryId, $firstYear ) = $person;
-    
+    $name = $person['personName'];
+    $countryId = $person['countryId'];
+    $firstYear = $person['year'];
+
     #--- Try to compute the semi-id.
     $paddingLetter = 'U';
     $neatName = strtoupper(preg_replace('/[^a-zA-Z ]/','',removeUglyAccentsAndStuff(extractRomanName($name))));
@@ -178,11 +184,14 @@ function showUnfinishedPersons () {
     #--- Html-ify name and country.
     $nameHtml = htmlEscape( $name );
     $countryIdHtml = htmlEscape( $countryId );
+    $personId = htmlEscape( $person['personId'] );
+    $competitionId = htmlEscape( $person['competitionId'] );
+    $dob = empty($person['dob']) ? 'yyyy-mm-dd' : $person['dob'];
 
     #--- Hidden field describing the case.
     $caseNr++;
-    tableRowFull( "&nbsp;<input type='hidden' name='oldNameAndCountry$caseNr' value='$nameHtml|$countryIdHtml' />" );
-    
+    tableRowFull( "&nbsp;<input type='hidden' name='oldNameAndCountryAndPersonIdAndCompId$caseNr' value='$nameHtml|$countryIdHtml|$personId|$competitionId' />" );
+
     #--- Show the person.
     # Note that we set this input to checked, but if there's a better match
     # lower on, then it will take precendence.
@@ -191,7 +200,7 @@ function showUnfinishedPersons () {
       visualize( $name ),
       visualize( $countryId ),
       peekLink( $name, $countryId ),
-      'mm/dd/yyyy',
+      $dob,
       "<input type='text' name='name$caseNr' value='$nameHtml' size='20' />",
       "<input type='text' name='country$caseNr' value='$countryIdHtml' size='20' />",
       "<input type='text' name='semiId$caseNr' value='$semiId' size='10' maxlength='8' />",
@@ -201,12 +210,13 @@ function showUnfinishedPersons () {
     $similarsCtr = 0;
     foreach( getMostSimilarPersonsMax( extractRomanName($name), $countryId, $candidates, 10 ) as $similarPerson ){
       list( $other_id, $other_name, $other_countryId ) = $similarPerson;
-      
+
       #--- If name and country match the unfinished persons, pre-select it.
       $checked = ($other_name==$name && $other_countryId==$countryId)
         ? "checked='checked'" : '';
-        
-      #--- Skip the unfinished person itself. 
+      $style = $checked ? 'background-color: red' : '';
+
+      #--- Skip the unfinished person itself.
       if( $checked && !$other_id )
         continue;
 
@@ -214,12 +224,12 @@ function showUnfinishedPersons () {
       $nameHtml = htmlEscape( $other_name );
       $countryHtml = htmlEscape( $other_countryId );
       $idHtml = htmlEscape( $other_id );
-      
+
       #--- Use "name|country|id" as action.
       $action = "$nameHtml|$countryHtml|$idHtml";
-      
+
       #--- Show the other person.
-      tableRow( array(
+      tableRowStyled( $style, array(
         "<input type='radio' name='action$caseNr' value='$action' $checked />",
 #        ($other_id ? personLink( $other_id, $other_name ) : $other_name),
         visualize( $other_name ),
@@ -230,7 +240,7 @@ function showUnfinishedPersons () {
         '',
         '',
       ));
-      
+
       #--- Stop after five similar persons.
       if( ++$similarsCtr == 5 )
         break;
@@ -241,7 +251,7 @@ function showUnfinishedPersons () {
       "<input type='radio' name='action$caseNr' value='skip' />",
       'I\'m not sure yet', '', '', '', '', '', ''
     ));
-    
+
     #--- Don't show more than 20 unfinished persons.
     if( $caseNr == 20 )
       break;
@@ -258,8 +268,8 @@ function showUnfinishedPersons () {
 function removeUglyAccentsAndStuff ( $ugly ) {
 #----------------------------------------------------------------------
 
-    $accent   = "ÀÁÂÃÄÅÆĂÇĆČÈÉÊËÌÍÎÏİÐĐÑÒÓÔÕÖØÙÚÛÜÝÞřßŞȘŠŚşșśšŢȚţțŻŽźżžəàáâãäåæăąắặảầấạậāằçćčèéêëęěễệếềēểğìíîïịĩіıðđķŁłļñńņňòóôõöøỗọơốờőợồộớùúûüưứữũụűūůựýýþÿỳỹ";
-    $noaccent = "aaaaaaaaccceeeeiiiiiddnoooooouuuuybrsssssssssttttzzzzzaaaaaaaaaaaaaaaaaaaccceeeeeeeeeeeegiiiiiiiiddklllnnnnoooooooooooooooouuuuuuuuuuuuuyybyyy";
+    $accent   = "ÀÁÂÃÄÅÆĂÇĆČÈÉÊËÌÍÎÏİÐĐÑÒÓÔÕÖØÙÚÛÜÝÞřßŞȘŠŚşșśšŢȚţțŻŽźżžəàáâãäåæăąắặảầấạậāằçćčèéêëęěễệếềēểğìíîïịĩіıðđķКкŁłļñńņňòóôõöøỗọơốờőợồộớùúûüưứữũụűūůựýýþÿỳỹ";
+    $noaccent = "aaaaaaaaccceeeeiiiiiddnoooooouuuuybrsssssssssttttzzzzzaaaaaaaaaaaaaaaaaaaccceeeeeeeeeeeegiiiiiiiiddkKklllnnnnoooooooooooooooouuuuuuuuuuuuuyybyyy";
 
     $nice = '';
     for( $i=0; $i<mb_strlen($ugly, 'UTF-8'); $i++ ){

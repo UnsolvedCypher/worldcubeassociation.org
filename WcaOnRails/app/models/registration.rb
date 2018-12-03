@@ -15,6 +15,8 @@ class Registration < ApplicationRecord
   has_many :competition_events, through: :registration_competition_events
   has_many :events, through: :competition_events
 
+  serialize :roles, Array
+
   accepts_nested_attributes_for :registration_competition_events, allow_destroy: true
 
   validates :user, presence: true, on: [:create]
@@ -66,9 +68,6 @@ class Registration < ApplicationRecord
   def name
     user.name
   end
-
-  attr_accessor :pos
-  attr_accessor :tied_previous
 
   def birthday
     user.dob
@@ -173,8 +172,8 @@ class Registration < ApplicationRecord
 
   def to_wcif
     {
-      "id" => id,
-      "eventIds" => events.map(&:id),
+      "wcaRegistrationId" => id,
+      "eventIds" => events.map(&:id).sort,
       "status" => if accepted?
                     'accepted'
                   elsif deleted?
@@ -184,6 +183,19 @@ class Registration < ApplicationRecord
                   end,
       "guests" => guests,
       "comments" => comments,
+    }
+  end
+
+  def self.wcif_json_schema
+    {
+      "type" => "object",
+      "properties" => {
+        "wcaRegistrationId" => { "type" => "integer" },
+        "eventIds" => { "type" => "array", "items" => { "type" => "string", "enum" => Event.pluck(:id) } },
+        "status" => { "type" => "string", "enum" => %w(accepted deleted pending) },
+        "guests" => { "type" => "integer" },
+        "comments" => { "type" => "string" },
+      },
     }
   end
 

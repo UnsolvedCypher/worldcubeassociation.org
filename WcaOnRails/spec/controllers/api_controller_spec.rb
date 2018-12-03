@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Api::V0::ApiController do
   describe 'GET #competitions_search' do
-    let!(:comp) { FactoryGirl.create(:competition, :confirmed, :visible, name: "Jfly's Competition 2015") }
+    let!(:comp) { FactoryBot.create(:competition, :confirmed, :visible, name: "Jfly's Competition 2015") }
 
     it 'requires query parameter' do
       get :competitions_search
@@ -29,7 +29,7 @@ RSpec.describe Api::V0::ApiController do
   end
 
   describe 'GET #posts_search' do
-    let!(:post) { FactoryGirl.create(:post, title: "post title", body: "post body") }
+    let!(:post) { FactoryBot.create(:post, title: "post title", body: "post body") }
 
     it 'requires query parameter' do
       get :posts_search
@@ -55,8 +55,8 @@ RSpec.describe Api::V0::ApiController do
   end
 
   describe 'GET #users_search' do
-    let(:person) { FactoryGirl.create(:person, name: "Jeremy", wca_id: "2005FLEI01") }
-    let!(:user) { FactoryGirl.create(:user, person: person) }
+    let(:person) { FactoryBot.create(:person, name: "Jeremy", wca_id: "2005FLEI01") }
+    let!(:user) { FactoryBot.create(:user, person: person) }
 
     it 'requires query parameter' do
       get :users_search
@@ -73,7 +73,7 @@ RSpec.describe Api::V0::ApiController do
     end
 
     it 'does not find dummy accounts' do
-      FactoryGirl.create :dummy_user, name: "Aaron"
+      FactoryBot.create :dummy_user, name: "Aaron"
       get :users_search, params: { q: "aaron" }
       expect(response.status).to eq 200
       json = JSON.parse(response.body)
@@ -98,7 +98,7 @@ RSpec.describe Api::V0::ApiController do
     end
 
     context 'Person without User' do
-      let!(:userless_person) { FactoryGirl.create(:person, name: "Bob") }
+      let!(:userless_person) { FactoryBot.create(:person, name: "Bob") }
 
       it "can find by wca_id" do
         get :users_search, params: { q: userless_person.wca_id, persons_table: true }
@@ -131,7 +131,7 @@ RSpec.describe Api::V0::ApiController do
     end
 
     it 'can only find delegates' do
-      delegate = FactoryGirl.create(:delegate, name: "Jeremy")
+      delegate = FactoryBot.create(:senior_delegate, name: "Jeremy")
       get :users_search, params: { q: "erem", only_delegates: true }
       expect(response.status).to eq 200
       json = JSON.parse(response.body)
@@ -141,9 +141,9 @@ RSpec.describe Api::V0::ApiController do
   end
 
   describe 'GET #omni_search' do
-    let!(:user) { FactoryGirl.create(:user_with_wca_id, name: "Jeremy Fleischman") }
-    let!(:comp) { FactoryGirl.create(:competition, :confirmed, :visible, name: "jeremy Jfly's Competition 2015", delegates: [user]) }
-    let!(:post) { FactoryGirl.create(:post, title: "jeremy post title", body: "post body", author: user) }
+    let!(:user) { FactoryBot.create(:user_with_wca_id, name: "Jeremy Fleischman") }
+    let!(:comp) { FactoryBot.create(:competition, :confirmed, :visible, name: "jeremy Jfly's Competition 2015", delegates: [user]) }
+    let!(:post) { FactoryBot.create(:post, title: "jeremy post title", body: "post body", author: user) }
 
     it 'requires query parameter' do
       get :omni_search
@@ -174,7 +174,7 @@ RSpec.describe Api::V0::ApiController do
 
   describe 'show_user_*' do
     it 'can query by id' do
-      user = FactoryGirl.create(:user, name: "Jeremy")
+      user = FactoryBot.create(:user, name: "Jeremy")
       get :show_user_by_id, params: { id: user.id }
       expect(response.status).to eq 200
       json = JSON.parse(response.body)
@@ -183,7 +183,7 @@ RSpec.describe Api::V0::ApiController do
     end
 
     it 'can query by wca id' do
-      user = FactoryGirl.create(:user_with_wca_id)
+      user = FactoryBot.create(:user_with_wca_id)
       get :show_user_by_wca_id, params: { wca_id: user.wca_id }
       expect(response.status).to eq 200
       json = JSON.parse(response.body)
@@ -201,8 +201,8 @@ RSpec.describe Api::V0::ApiController do
 
   describe 'GET #delegates' do
     it 'includes emails and regions' do
-      senior_delegate = FactoryGirl.create :senior_delegate
-      delegate = FactoryGirl.create :delegate, region: "SF bay area, USA", senior_delegate: senior_delegate
+      senior_delegate = FactoryBot.create :senior_delegate
+      delegate = FactoryBot.create :delegate, region: "SF bay area, USA", senior_delegate: senior_delegate
 
       get :delegates
       expect(response.status).to eq 200
@@ -216,8 +216,8 @@ RSpec.describe Api::V0::ApiController do
     end
 
     it 'paginates' do
-      30.times do
-        FactoryGirl.create :delegate
+      15.times do
+        FactoryBot.create :delegate # Each delegate gets a senior delegate created, so there are 30 delegates in total
       end
 
       get :delegates
@@ -245,7 +245,7 @@ RSpec.describe Api::V0::ApiController do
       get :scramble_program
       expect(response.status).to eq 200
       json = JSON.parse(response.body)
-      expect(json["current"]["name"]).to eq "TNoodle-WCA-0.11.5"
+      expect(json["current"]["name"]).to eq "TNoodle-WCA-0.13.5"
     end
   end
 
@@ -261,21 +261,23 @@ RSpec.describe Api::V0::ApiController do
 
     context 'signed in as board member' do
       before :each do
-        api_sign_in_as(FactoryGirl.create(:board_member))
+        api_sign_in_as(FactoryBot.create(:user, :board_member))
       end
 
-      it 'has correct delegate_status' do
+      it 'has correct team membership' do
         get :me
         expect(response.status).to eq 200
         json = JSON.parse(response.body)
 
-        expect(json['me']['delegate_status']).to eq 'board_member'
+        expect(json['me']['teams']).to match_array [
+          { "friendly_id" => "board", "leader" => false },
+        ]
       end
     end
 
     context 'signed in as senior delegate' do
       before :each do
-        api_sign_in_as(FactoryGirl.create(:senior_delegate))
+        api_sign_in_as(FactoryBot.create(:senior_delegate))
       end
 
       it 'has correct delegate_status' do
@@ -289,7 +291,7 @@ RSpec.describe Api::V0::ApiController do
 
     context 'signed in as candidate delegate' do
       before :each do
-        api_sign_in_as(FactoryGirl.create(:candidate_delegate))
+        api_sign_in_as(FactoryBot.create(:candidate_delegate))
       end
 
       it 'has correct delegate_status' do
@@ -303,7 +305,7 @@ RSpec.describe Api::V0::ApiController do
 
     context 'signed in as delegate' do
       before :each do
-        api_sign_in_as(FactoryGirl.create(:delegate))
+        api_sign_in_as(FactoryBot.create(:delegate))
       end
 
       it 'has correct delegate_status' do
@@ -317,13 +319,13 @@ RSpec.describe Api::V0::ApiController do
 
     context 'signed in as a member of some teams and a leader of others' do
       before :each do
-        user = FactoryGirl.create :user
+        user = FactoryBot.create :user
 
-        wrc_team = Team.find_by_friendly_id('wrc')
-        FactoryGirl.create(:team_member, team_id: wrc_team.id, user_id: user.id)
+        wrc_team = Team.wrc
+        FactoryBot.create(:team_member, team_id: wrc_team.id, user_id: user.id)
 
-        results_team = Team.find_by_friendly_id('wrt')
-        FactoryGirl.create(:team_member, team_id: results_team.id, user_id: user.id, team_leader: true)
+        results_team = Team.wrt
+        FactoryBot.create(:team_member, team_id: results_team.id, user_id: user.id, team_leader: true)
 
         api_sign_in_as(user)
       end
@@ -343,7 +345,7 @@ RSpec.describe Api::V0::ApiController do
 
     context 'signed in with valid wca id' do
       let(:person) do
-        FactoryGirl.create(
+        FactoryBot.create(
           :person,
           countryId: "USA",
           gender: "m",
@@ -353,7 +355,7 @@ RSpec.describe Api::V0::ApiController do
         )
       end
       let(:user) do
-        FactoryGirl.create(
+        FactoryBot.create(
           :user,
           avatar: File.open(Rails.root.join("spec/support/logo.jpg")),
           wca_id: person.wca_id,
@@ -416,7 +418,7 @@ RSpec.describe Api::V0::ApiController do
 
     context 'signed in with invalid wca id' do
       let(:user) do
-        u = FactoryGirl.create :user, country_iso2: "US"
+        u = FactoryBot.create :user, country_iso2: "US"
         u.update_column(:wca_id, "fooooo")
         u
       end
@@ -446,7 +448,7 @@ RSpec.describe Api::V0::ApiController do
     end
 
     context 'signed in without wca id' do
-      let(:user) { FactoryGirl.create :user, country_iso2: "US" }
+      let(:user) { FactoryBot.create :user, country_iso2: "US" }
       let(:scopes) { Doorkeeper::OAuth::Scopes.new }
       let(:token) { double acceptable?: true, resource_owner_id: user.id, scopes: scopes }
       before :each do
@@ -469,6 +471,31 @@ RSpec.describe Api::V0::ApiController do
         expect(json['me']['country_iso2']).to eq "US"
         expect(json['me']['gender']).to eq "m"
         expect(json['me']['dob']).to eq user.dob.strftime("%F")
+      end
+    end
+  end
+
+  describe 'GET #export_public' do
+    it 'returns information about latest public export' do
+      Dir.mktmpdir do |dir|
+        rails_root = Pathname.new(dir).join("WcaOnRails")
+        FileUtils.mkdir_p rails_root
+        expect(Rails).to receive(:root).twice.and_return(rails_root)
+
+        FileUtils.mkdir_p "#{dir}/webroot/results/misc"
+        FileUtils.touch "#{dir}/webroot/results/misc/WCA_export001_20171114T062335Z.sql.zip"
+        FileUtils.touch "#{dir}/webroot/results/misc/WCA_export002_20181114T062335Z.sql.zip"
+        FileUtils.touch "#{dir}/webroot/results/misc/WCA_export001_20171114T062335Z.tsv.zip"
+        FileUtils.touch "#{dir}/webroot/results/misc/WCA_export002_20181114T062335Z.tsv.zip"
+
+        get :export_public
+        expect(response.status).to eq 200
+        json = JSON.parse(response.body)
+        expect(json).to eq(
+          'export_date' => '2018-11-14T06:23:35Z',
+          'sql_url' => "#{root_url}results/misc/WCA_export002_20181114T062335Z.sql.zip",
+          'tsv_url' => "#{root_url}results/misc/WCA_export002_20181114T062335Z.tsv.zip",
+        )
       end
     end
   end

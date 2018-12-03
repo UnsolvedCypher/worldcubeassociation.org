@@ -1,5 +1,31 @@
 <?php
 #----------------------------------------------------------------------
+#   Export Format Version
+#----------------------------------------------------------------------
+
+# We try to use semantic MAJOR.MINOR.PATCH versioning: https://semver.org/
+#
+# Guidelines for how to bump this version:
+#
+# MAJOR
+# - Remove/reorder/change the meaning any columns in a table
+# - Change the encoding for any type of result
+#
+# MINOR
+# - Add a new column to the *end* of a table
+# - Add a new table
+#
+# PATCH
+# - Fix bugs or typos in the export formatting.
+#
+# No bump
+# - Add events, formats, or countries that can be representated using the
+#   existing schema
+# - Routine database export.
+#
+$CURRENT_EXPORT_FORMAT_VERSION = "1.0.0";
+
+#----------------------------------------------------------------------
 #   Initialization and page contents.
 #----------------------------------------------------------------------
 
@@ -12,7 +38,7 @@ showChoices();
 
 if( $chosenExport ){
 
-  exportPublic( array(
+  exportPublic( $CURRENT_EXPORT_FORMAT_VERSION, array(
     'Results'      => 'SELECT   competitionId, eventId, roundTypeId, pos,
                                 best, average,
                                 personName, personId, countryId AS personCountryId,
@@ -25,9 +51,7 @@ if( $chosenExport ){
     'RoundTypes'   => '*',
     'Events'       => '*',
     'Formats'      => '*',
-    # This should be set back to '*' after https://github.com/thewca/wca-workbook-assistant/pull/115
-    # is merged and released. Also see the change here: https://github.com/thewca/worldcubeassociation.org/pull/808
-    'Countries'    => 'SELECT id, name, continentId, 0 as latitude, 0 as longitude, 0 as zoom, iso2 FROM Countries',
+    'Countries'    => '*',
     'Continents'   => '*',
     'Persons'      => 'SELECT id, subid, name, countryId, gender FROM Persons',
     # To maintain the database export format, we have to build up the
@@ -46,6 +70,11 @@ if( $chosenExport ){
                               WHERE Competitions.showAtAll=1
                               GROUP BY Competitions.id',
     'Scrambles'   => '*',
+    'championships' => 'SELECT championships.*
+                               FROM championships
+                               LEFT JOIN Competitions on Competitions.id=championships.competition_id
+                               WHERE Competitions.showAtAll=1',
+    'eligible_country_iso2s_for_championship' => '*',
   ) );
 }
 
@@ -81,7 +110,7 @@ function showChoices () {
 }
 
 #----------------------------------------------------------------------
-function exportPublic ( $sources ) {
+function exportPublic ( $exportFormatVersion, $sources ) {
 #----------------------------------------------------------------------
 
   #--- No time limit
@@ -100,7 +129,8 @@ function exportPublic ( $sources ) {
   file_put_contents( 'serial.txt', $serial );
 
   #--- Build the file basename
-  $basename         = sprintf( 'WCA_export%03d_%s', $serial,    wcaDate( 'Ymd' ) );
+  $dateTime         = (new DateTime('NOW', new DateTimeZone('UTC')))->format('Ymd\THis\Z');
+  $basename         = sprintf( 'WCA_export%03d_%s', $serial, $dateTime );
   $oldBasenameStart = sprintf( 'WCA_export%03d_', $oldSerial );
 
   #------------------------------------------
@@ -112,7 +142,7 @@ function exportPublic ( $sources ) {
 
   #--- Start the SQL file
   $sqlFile = "WCA_export.sql";
-  file_put_contents( $sqlFile, "--\n-- $basename\n-- Also read the README.txt\n--\n" );
+  file_put_contents( $sqlFile, "--\n-- $basename\n-- Also read the README.md\n--\n" );
 
   #--- Walk the tables, create SQL file and TSV files
   foreach ( $sources as $tableName => $tableSource ) {
@@ -139,11 +169,17 @@ function exportPublic ( $sources ) {
     $sqlInserts = array();
     while ( $row = mysql_fetch_array( $dbResult, MYSQL_NUM ) ) {
       // Polish the whitespace (especially remove characters that would break the tsv file format)
-      $niceValues = preg_replace( '/\s+/', ' ', array_map( 'trim', $row ) );
+      // Replace new lines to | for multi-blindfolded scrambles
+      $niceValues = array_map( 'trim', $row );
+      if ($tableName === 'Scrambles' && in_array('333mbf', $row)) {
+        $niceValues = preg_replace( '/\n+/', '|', $niceValues );
+      }
+      $niceValues = preg_replace( '/\s+/', ' ', $niceValues );
 
       // Data to write
       $tsv .= implode( "\t", $niceValues ) . "\n";
-      $sqlInserts[] = "('" . implode( "','", array_map( 'addslashes', $niceValues ) ) . "')";
+      // Use $row instead of $niceValues
+      $sqlInserts[] = "('" . implode( "','", array_map( 'addslashes', $row ) ) . "')";
 
       // Periodically write data so variable size doesn't explode
       if ( strlen($tsv) > 200000 ) {
@@ -179,7 +215,21 @@ function exportPublic ( $sources ) {
 
   #--- Build the README file
   echo "<p><b>Build the README file</b></p>";
-  instantiateTemplate( 'README.txt', array( 'longDate' => wcaDate( 'F j, Y' ) ) );
+  instantiateTemplate( 'README.md', array(
+    'longDate' => wcaDate( 'F j, Y' ),
+    'exportFormatVersion' => $exportFormatVersion
+  ) );
+
+  #------------------------------------------
+  # metadata.json
+  #------------------------------------------
+
+  $metadataFile = "metadata.json";
+  $metadataValue = array(
+    "export_format_version" => $exportFormatVersion,
+    "export_date" => wcaDate( 'c' )
+  );
+  file_put_contents( $metadataFile, json_encode( $metadataValue, JSON_PRETTY_PRINT ) );
 
   #------------------------------------------
   # ZIPs
@@ -189,8 +239,8 @@ function exportPublic ( $sources ) {
   echo "<p><b>Build the ZIP files</b></p>";
   $sqlZipFile  = "$basename.sql.zip";
   $tsvZipFile  = "$basename.tsv.zip";
-  mySystem( "zip $sqlZipFile README.txt $sqlFile" );
-  mySystem( "zip $tsvZipFile README.txt *.tsv" );
+  mySystem( "zip $sqlZipFile README.md $metadataFile $sqlFile" );
+  mySystem( "zip $tsvZipFile README.md $metadataFile *.tsv" );
 
   #------------------------------------------
   # HTML
@@ -203,7 +253,7 @@ function exportPublic ( $sources ) {
                        'sqlZipFileSize' => sprintf( '%.1f MB', filesize( $sqlZipFile ) / 1000000 ),
                        'tsvZipFile'     => $tsvZipFile,
                        'tsvZipFileSize' => sprintf( '%.1f MB', filesize( $tsvZipFile ) / 1000000 ),
-                       'README'         => file_get_contents( 'README.txt' ) ) );
+                       'README'         => file_get_contents( 'README.md' ) ) );
 
   #------------------------------------------
   # DEPLOY
@@ -212,6 +262,7 @@ function exportPublic ( $sources ) {
   #--- Move new files to public directory
   echo '<p><b>Move new files to public directory</b></p>';
   mySystem( "mv $sqlZipFile $tsvZipFile ../../misc/" );
+  mySystem( "mv $metadataFile ../../misc/" );
   mySystem( "rm -rf ../../misc/WCA_export.sql.zip && ln -s $sqlZipFile ../../misc/WCA_export.sql.zip" );
   mySystem( "rm -rf ../../misc/WCA_export.tsv.zip && ln -s $tsvZipFile ../../misc/WCA_export.tsv.zip" );
   mySystem( "mv export.html ../../misc/" );
@@ -222,7 +273,7 @@ function exportPublic ( $sources ) {
 
   #--- Delete temporary and old stuff we don't need anymore
   echo "<p><b>Delete temporary and old stuff we don't need anymore</b></p>";
-  mySystem( "rm README.txt $sqlFile *.tsv" );
+  mySystem( "rm README.md $sqlFile *.tsv" );
   mySystem( "rm ../../misc/$oldBasenameStart*" );
 
   #------------------------------------------

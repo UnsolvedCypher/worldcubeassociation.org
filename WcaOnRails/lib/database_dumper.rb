@@ -30,6 +30,7 @@ module DatabaseDumper
         copy: %w(
           id
           name
+          name_reason
           cityName
           countryId
           information
@@ -49,7 +50,7 @@ module DatabaseDumper
           showAtAll
           latitude
           longitude
-          isConfirmed
+          confirmed_at
           contact
           registration_open
           registration_close
@@ -65,6 +66,18 @@ module DatabaseDumper
           announced_at
           base_entry_fee_lowest_denomination
           currency_code
+          extra_registration_requirements
+          created_at
+          updated_at
+          on_the_spot_registration
+          on_the_spot_entry_fee_lowest_denomination
+          refund_policy_percent
+          refund_policy_limit_date
+          guests_entry_fee_lowest_denomination
+          regulation_z1
+          regulation_z1_reason
+          regulation_z3
+          regulation_z3_reason
         ),
         db_default: %w(
           connected_stripe_account_id
@@ -261,10 +274,13 @@ module DatabaseDumper
           id
           competition_event_id
           format_id
+          total_number_of_rounds
           number
           time_limit
           cutoff
           advancement_condition
+          scramble_set_count
+          round_results
           created_at
           updated_at
         ),
@@ -344,6 +360,55 @@ module DatabaseDumper
           content
           display_order
           name
+        ),
+      ),
+    }.freeze,
+    "competition_venues" => {
+      where_clause: JOIN_WHERE_VISIBLE_COMP,
+      column_sanitizers: actions_to_column_sanitizers(
+        copy: %w(
+          id
+          competition_id
+          wcif_id
+          name
+          latitude_microdegrees
+          longitude_microdegrees
+          timezone_id
+          created_at
+          updated_at
+        ),
+      ),
+    }.freeze,
+    "venue_rooms" => {
+      where_clause: "JOIN competition_venues ON competition_venues.id = competition_venue_id #{JOIN_WHERE_VISIBLE_COMP}",
+      column_sanitizers: actions_to_column_sanitizers(
+        copy: %w(
+          id
+          competition_venue_id
+          wcif_id
+          name
+          color
+          created_at
+          updated_at
+        ),
+      ),
+    }.freeze,
+    "schedule_activities" => {
+      # FIXME: this does not handle nested activities, which will be omitted!
+      where_clause: "JOIN venue_rooms ON (venue_rooms.id = holder_id AND holder_type = \"VenueRoom\") JOIN competition_venues ON competition_venues.id = competition_venue_id #{JOIN_WHERE_VISIBLE_COMP}",
+      column_sanitizers: actions_to_column_sanitizers(
+        copy: %w(
+          id
+          holder_type
+          holder_id
+          wcif_id
+          name
+          activity_code
+          start_time
+          end_time
+          scramble_set_id
+          created_at
+          updated_at
         ),
       ),
     }.freeze,
@@ -445,6 +510,7 @@ module DatabaseDumper
           guests
           updated_at
           user_id
+          roles
         ),
         db_default: %w(ip),
         fake_values: {
@@ -469,14 +535,14 @@ module DatabaseDumper
       ),
     }.freeze,
     "teams" => {
-      where_clause: "",
+      where_clause: "WHERE NOT hidden",
       column_sanitizers: actions_to_column_sanitizers(
         copy: %w(
           id
           created_at
           friendly_id
           email
-          rank
+          hidden
           updated_at
         ),
       ),
@@ -497,6 +563,7 @@ module DatabaseDumper
         copy: %w(
           id
           avatar
+          competition_notifications_enabled
           confirmed_at
           country_iso2
           created_at
@@ -543,23 +610,58 @@ module DatabaseDumper
         },
       ),
     }.freeze,
-    "vote_options" => :skip_all_rows,
-    "votes" => :skip_all_rows,
-    "linkings" => {
+    "locations" => :skip_all_rows,
+    "incidents" => {
       where_clause: "",
       column_sanitizers: actions_to_column_sanitizers(
-        copy: %w(
-          wca_id
-          wca_ids
-        ),
+        copy: %w(id title public_summary digest_worthy resolved_at digest_sent_at created_at updated_at),
+        db_default: %w(private_description private_wrc_decision),
       ),
     }.freeze,
+    "incident_competitions" => {
+      where_clause: "",
+      column_sanitizers: actions_to_column_sanitizers(
+        copy: %w(id incident_id competition_id),
+        db_default: %w(comments),
+      ),
+    }.freeze,
+    "incident_tags" => {
+      where_clause: "",
+      column_sanitizers: actions_to_column_sanitizers(
+        copy: %w(id incident_id tag),
+      ),
+    }.freeze,
+    "vote_options" => :skip_all_rows,
+    "votes" => :skip_all_rows,
+    # We have seen MySQL full table errors when trying to copy the entire linkings table.
+    # Fortunately, it is a not really important table, so we can simply skip all its rows.
+    "linkings" => :skip_all_rows,
     "timestamps" => {
       where_clause: "",
       column_sanitizers: actions_to_column_sanitizers(
         copy: %w(
           name
           date
+        ),
+      ),
+    }.freeze,
+    "championships" => {
+      where_clause: "",
+      column_sanitizers: actions_to_column_sanitizers(
+        copy: %w(
+          id
+          competition_id
+          championship_type
+        ),
+      ),
+    }.freeze,
+    "eligible_country_iso2s_for_championship" => {
+      where_clause: "",
+      column_sanitizers: actions_to_column_sanitizers(
+        copy: %w(
+          id
+          championship_type
+          eligible_country_iso2
         ),
       ),
     }.freeze,
@@ -606,14 +708,21 @@ module DatabaseDumper
   end
 
   def self.mysql(command, database = nil)
-    `mysql #{self.mysql_cli_creds} #{database} -e '#{command}' #{filter_out_mysql_warning}`
+    bash!("mysql #{self.mysql_cli_creds} #{database} -e '#{command}' #{filter_out_mysql_warning}")
   end
 
   def self.mysqldump(db_name, dest_filename)
-    `mysqldump #{self.mysql_cli_creds} #{db_name} -r #{dest_filename} #{filter_out_mysql_warning}`
+    bash!("mysqldump #{self.mysql_cli_creds} #{db_name} -r #{dest_filename} #{filter_out_mysql_warning}")
+    bash!("sed -i 's_^/\\*!50013 DEFINER.*__' #{dest_filename}")
   end
 
   def self.filter_out_mysql_warning
-    '2>&1 | grep -v "[Warning] Using a password on the command line interface can be insecure."'
+    '2>&1 | grep -v "[Warning] Using a password on the command line interface can be insecure." || true'
   end
+end
+
+# See https://julialang.org/blog/2012/03/shelling-out-sucks
+def bash!(cmd)
+  cmd = "set -o pipefail && #{cmd}"
+  system("bash -c #{cmd.shellescape}") || raise("Error while running '#{cmd}' (#{$CHILD_STATUS})")
 end

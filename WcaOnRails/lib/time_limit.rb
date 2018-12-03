@@ -47,23 +47,31 @@ class TimeLimit
     time_limit ? JSON.dump(time_limit.to_wcif) : nil
   end
 
-  private def wcif_round_id_to_round(competition, wcif_round_id)
-    event_id, round_number = wcif_round_id.split("-")
-    competition_event = competition.competition_events.find_by_event_id!(event_id)
-    competition_event.rounds.find_by_number!(round_number)
+  def self.wcif_json_schema
+    {
+      "type" => ["object", "null"],
+      "properties" => {
+        "centiseconds" => { "type" => "integer" },
+        "cumulativeRoundIds" => { "type" => "array", "items" => { "type" => "string" } },
+      },
+    }
   end
 
   def to_s(round)
-    time_str = SolveTime.new(round.competition_event.event_id, :best, self.centiseconds).clock_format
+    time_str = SolveTime.new(round.event.id, :best, self.centiseconds).clock_format
     case self.cumulative_round_ids.length
     when 0
-      time_str
+      if round.can_change_time_limit?
+        time_str
+      else
+        I18n.t "time_limit.#{round.event.id}"
+      end
     when 1
       I18n.t("time_limit.cumulative.one_round", time: time_str)
     else
-      rounds = self.cumulative_round_ids.map { |round_id| wcif_round_id_to_round(round.competition, round_id) }
-      rounds_str = rounds.map(&:name).to_sentence
-      I18n.t("time_limit.cumulative.across_rounds", time: time_str, rounds: rounds_str)
+      all_rounds = Hash[round.competition.rounds.map { |r| [r.wcif_id, r.name] }]
+      round_strs = self.cumulative_round_ids.map { |round_id| all_rounds[round_id] }
+      I18n.t("time_limit.cumulative.across_rounds", time: time_str, rounds: round_strs.to_sentence)
     end
   end
 end

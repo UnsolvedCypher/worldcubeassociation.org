@@ -18,39 +18,46 @@
 //= require locationpicker.jquery
 //= require selectize
 //= require selectize.do_not_clear_on_blur
+//= require selectize.tags_options
 //= require jquery.jcrop
 //= require lodash
 //= require jquery.wca-autocomplete
 //= require jquery.floatThead.js
 //= require cocoon
 //= require moment
-//= require moment/cs.js
-//= require moment/de.js
-//= require moment/es.js
-//= require moment/fr.js
-//= require moment/it.js
-//= require moment/ja.js
-//= require moment/hu.js
-//= require moment/pl.js
-//= require moment/pt.js
-//= require moment/pt-br.js
-//= require moment/zh-cn.js
-//= require moment/zh-tw.js
-//= require moment/nl.js
-//= require moment/ru.js
-//= require moment/da.js
-//= require moment/hr.js
-//= require moment/sl.js
-//= require moment/sk.js
-//= require moment/ro.js
+//= require moment-timezone-with-data
 //= require bootstrap-datetimepicker
 //= require bootstrap-table
+//= require bootstrap-table-locale-all
 //= require extensions/bootstrap-table-mobile
 //= require autosize
+//= require fullcalendar
+//= require fullcalendar/lang/cs.js
+//= require fullcalendar/lang/da.js
+//= require fullcalendar/lang/de.js
+//= require fullcalendar/lang/es.js
+//= require fullcalendar/lang/fi.js
+//= require fullcalendar/lang/fr.js
+//= require fullcalendar/lang/hr.js
+//= require fullcalendar/lang/hu.js
+//= require fullcalendar/lang/id.js
+//= require fullcalendar/lang/it.js
+//= require fullcalendar/lang/ja.js
+//= require fullcalendar/lang/ko.js
+//= require fullcalendar/lang/nl.js
+//= require fullcalendar/lang/pl.js
+//= require fullcalendar/lang/pt-br.js
+//= require fullcalendar/lang/pt.js
+//= require fullcalendar/lang/ro.js
+//= require fullcalendar/lang/ru.js
+//= require fullcalendar/lang/sk.js
+//= require fullcalendar/lang/sl.js
+//= require fullcalendar/lang/vi.js
+//= require fullcalendar/lang/zh-cn.js
+//= require fullcalendar/lang/zh-tw.js
 //= require jquery_plugins
-//= require autoNumeric
-//= require currencies-data
-//= require currencies
+//= require jquery-ui/position
+//= require jquery-ui/widgets/draggable
 //= require jquery.slick
 //= require_self
 //= require_tree .
@@ -140,6 +147,7 @@ wca.removeMarkers = function(map) {
 wca.renderMarkdownRequest = function(markdownContent) {
   return wca.cancelPendingAjaxAndAjax('render_markdown', {
     url: '/render_markdown',
+    method: 'POST',
     data: {
       'markdown_content': markdownContent,
     },
@@ -220,36 +228,9 @@ $(function() {
     }).trigger("dp.change");
   });
 
-  function insertText(editor, markup, promptText) {
-    var cm = editor.codemirror;
-
-    var startPoint = cm.getCursor('start');
-    var endPoint = cm.getCursor('end');
-    var somethingSelected = cm.somethingSelected();
-
-    var text = (somethingSelected ? cm.getSelection() : prompt(promptText));
-
-    if(!text) {
-      return false;
-    }
-
-    cm.replaceSelection(markup.build(text));
-
-    if(somethingSelected) {
-      startPoint.ch += markup.start.length;
-      endPoint.ch += markup.start.length;
-      cm.setSelection(startPoint, endPoint);
-    }
-
-    cm.focus();
-  }
-
   $('[data-toggle="tooltip"]').tooltip();
   $('[data-toggle="popover"]').popover();
   $('input.wca-autocomplete').wcaAutocomplete();
-
-  // Activate currency masks for the relevant fields
-  $('input.wca-currency-mask').wcaSetupCurrencyMask();
 
   var $tablesToFloatHeaders = $('table.floatThead');
   $tablesToFloatHeaders.floatThead({
@@ -396,9 +377,36 @@ $(function() {
   $('.wca-local-time').each(function() {
     var data = $(this).data();
     var date = new Date(data.utcTime);
-    var formatted = new Intl.DateTimeFormat(data.locale, {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: 'numeric', timeZoneName: 'short'
-    }).format(date);
+    var formatted;
+    if(typeof(Intl) !== "undefined") {
+      formatted = new Intl.DateTimeFormat(data.locale, {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: 'numeric', timeZoneName: 'short'
+      }).format(date);
+    } else {
+      // Workaround for https://github.com/thewca/worldcubeassociation.org/issues/3228.
+      // We can remove this once we consider Safari 9 to be "dead enough".
+      formatted = date.toString();
+    }
     $(this).text(formatted);
+  });
+});
+
+// Handler for locale changes.
+$(function() {
+  $('#locale-selector').on('click', 'a', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // More or less copied from
+    // https://github.com/rails/jquery-ujs/blob/9e805c90c8cfc57b39967052e1e9013ccb318cf8/src/rails.js#L215.
+    var csrfToken = $('meta[name=csrf-token]').attr('content');
+    var csrfParam = $('meta[name=csrf-param]').attr('content');
+    var form = $('<form method="post" action="' + this.href + '"></form>');
+    var metadataInput = '<input name="_method" value="patch" type="hidden" />';
+    metadataInput += '<input name="' + csrfParam + '" value="' + csrfToken + '" type="hidden" />';
+    metadataInput += '<input name="current_url" value="' + window.location.toString() + '" type="hidden" />';
+
+    form.hide().append(metadataInput).appendTo('body');
+    form.submit();
   });
 });

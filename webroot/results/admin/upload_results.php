@@ -100,7 +100,7 @@ if($form->submitted()) {
     } else {
       $form->invalidate('json', 'Please upload a JSON file containing a competition ID.');
     }
-    
+
     // check for valid persons data structure
     if(!property_exists($competition_data, 'persons') || !is_array($competition_data->persons)) {
       $form->invalidate('json', 'Person data malformed or not present in JSON.');
@@ -116,7 +116,7 @@ if($form->submitted()) {
   // deal with uploaded data
   if($form->validate() === TRUE) {
     $compId = $submitted_data['competitionId'];
-    
+
     // store JSON in db
 
     // store person data in InboxPersons first
@@ -204,6 +204,10 @@ if($form->submitted()) {
         // store scrambles
         foreach ($round->groups as $group) {
           $groupId = property_exists($group, 'group') ? ($group->group) : false;
+
+          if(!preg_match("/^[A-Z]+$/", $groupId)) {
+            $round_errors[] = "Invalid scramble group name: ".o($groupId);
+          }
 
           // Store normal scrambles
           if(!property_exists($group, 'scrambles')) {

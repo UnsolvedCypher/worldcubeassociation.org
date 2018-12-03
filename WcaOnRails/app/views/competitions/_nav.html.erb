@@ -31,14 +31,17 @@
       if current_user&.can_manage_competition?(@competition)
         nav_items << {
           text: t('.menu.edit'),
-          path: current_user.can_admin_results? ? admin_edit_competition_path(@competition) : edit_competition_path(@competition),
+          path: current_user.can_admin_competitions? ? admin_edit_competition_path(@competition) : edit_competition_path(@competition),
           fa_icon: "lock",
           children: [
             { text: t('.menu.orga_view'), path: edit_competition_path(@competition), fa_icon: "lock" },
             { text: t('.menu.event_view'), path: edit_events_path(@competition), fa_icon: "cubes" },
+            { text: t('.menu.schedule_view'), path: edit_schedule_path(@competition), fa_icon: "calendar" },
             { text: t('.menu.payment_view'), path: competitions_payment_setup_path(@competition), fa_icon: "cc-stripe" },
+          ] +
+          (current_user.can_admin_competitions? ? [
             { text: t('.menu.admin_view'), path: admin_edit_competition_path(@competition), fa_icon: "lock" },
-          ]
+          ] : [])
         }
         if @competition.use_wca_registration?
           nav_items << {
@@ -60,6 +63,13 @@
           text: t('.menu.clone'),
           path: clone_competition_path(@competition),
           fa_icon: "clone",
+        }
+      end
+      if current_user&.can_submit_competition_results?(@competition)
+        nav_items << {
+          text: t('.menu.submit_results'),
+          path: submit_results_edit_path(@competition),
+          fa_icon: "cloud-upload",
         }
       end
       if current_user&.can_view_delegate_report?(@competition.delegate_report)
@@ -98,9 +108,7 @@
 
       <% blocks.define :nav_list do |nav_items| %>
         <div class="list-group list-group-root">
-          <% nav_items.each do |nav_item| %>
-            <%= blocks.render :nav_list_item, nav_item %>
-          <% end %>
+          <%= blocks.render :nav_list_item, collection: nav_items %>
         </div>
       <% end %>
 
@@ -117,7 +125,7 @@
         <% if !nav_item[:hidden] %>
 
           <%= link_to nav_item[:path], class: "list-group-item" + (nav_item[:active] ? ' active' : '') do %>
-            <%= blocks.render :nav_icon, nav_item %>
+            <%= blocks.render :nav_icon, nav_item, {} %>
             <%= nav_item[:text] %>
             <% if nav_item[:notification_count] %>
               <span id="pending-registrations-count" class="pull-right label <%= nav_item[:notification_count] > 0 ? "label-danger" : "label-success" %>">
@@ -140,7 +148,7 @@
                                   placement: "top",
                                   container: "body",
                                 } do %>
-                      <%= blocks.render :nav_icon, child_nav_item %>
+                      <%= blocks.render :nav_icon, child_nav_item, {} %>
                     <% end %>
                   <% end %>
                 </span>
@@ -149,9 +157,7 @@
 
             <% if nav_item[:children] && nav_item[:children].length > 0 %>
               <div class="list-group">
-                <% nav_item[:children].each do |child_nav_item| %>
-                  <%= blocks.render :nav_list_item, child_nav_item %>
-                <% end %>
+                <%= blocks.render :nav_list_item, collection: nav_item[:children] %>
               </div>
             <% end %>
           <% end %>
@@ -179,6 +185,12 @@
             <%= link_to "here", delegate_report_edit_path(@competition) %>
             to work on it.
           <% end %>
+        <% end %>
+      <% end %>
+
+      <% if @competition.user_should_post_competition_results?(current_user) %>
+        <%= alert :warning, note: true do %>
+          Please submit results for this competition! You can upload them <%= link_to "here", submit_results_edit_path(@competition) %>.
         <% end %>
       <% end %>
 

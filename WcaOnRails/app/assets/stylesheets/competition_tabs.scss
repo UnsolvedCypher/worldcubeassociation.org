@@ -35,6 +35,11 @@ table#competition-tabs {
   }
 }
 
+// Hide the div with all the time limit/format/cutoff information if the active tab is not the Schedule or Events.
+.tab-pane.active:not(#competition-events):not(#competition-schedule) ~ div.time-limit-information {
+  display: none;
+}
+
 div#competition-tabs {
   img {
     max-width: 100%;

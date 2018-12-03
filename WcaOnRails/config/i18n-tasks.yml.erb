@@ -67,7 +67,9 @@ search:
     - app/assets/images
     - app/assets/fonts
     # i18n-tasks fails on TNoodle jars and old non-utf8 translations...
-    - app/views/regulations
+    - app/views/regulations/history
+    - app/views/regulations/scrambles
+    - app/views/regulations/translations
 
   ## Alternatively, the only files or `File.fnmatch patterns` to search in `paths`:
   ## If specified, this settings takes priority over `exclude`, but `exclude` still applies.
@@ -103,19 +105,23 @@ ignore_unused:
   - 'simple_form.{error_notification,required}.:'
   # We iterate through the children, so we use all of them
   - 'users.edit.avatar_guidelines.*'
+  - 'users.edit.delegate_avatar_guidelines.*'
   - 'faq.answers.*'
   - 'about.mission.paragraphs.*'
   - 'logo.paragraphs.*'
   - 'score_tools.paragraphs.*'
   - 'wca.doorkeeper.scopes.*'
   - 'contact.*.info'
+  - 'organizer_guidelines.*'
   # Mark all events/continents/countries/delegate_statuses as used.
   # FYI if a language doesn't translate one of them, it will appear in the missing keys, as long as it exists in English
   - 'events.*'
   - 'continents.*'
   - 'countries.*'
   - 'delegate_statuses.*'
+  - 'media.new.media_guidelines.*'
 # - 'simple_form.{placeholders,hints,labels}.*'
+  - 'devise.mailer.*'
 
 ## Exclude these keys from the `i18n-tasks eq-base' report:
 # ignore_eq_base:

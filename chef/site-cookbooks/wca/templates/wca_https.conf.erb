@@ -7,15 +7,15 @@
 ssl on;
 
 # Private key (should be generated locally and not by our CA)
-ssl_certificate_key <%= @repo_root %>/secrets/<%= @server_name %>.key;
+ssl_certificate_key <%= @repo_root %>/secrets/https/<%= @server_name %>.key;
 
 # Signed certificate + intermediates certificates
-ssl_certificate <%= @repo_root %>/secrets/<%= @server_name %>.chained.crt;
+ssl_certificate <%= @repo_root %>/secrets/https/<%= @server_name %>.chained.crt;
 
 # Strong DH parameters
 # The DH file is generated using the above command (takes about 20 minutes)
 # root@wca# openssl dhparam -out dh4096.pem -outform PEM -2 4096
-ssl_dhparam <%= @repo_root %>/secrets/dh4096.pem;
+ssl_dhparam <%= @repo_root %>/secrets/https/dh4096.pem;
 
 # Recommended security settings from https://wiki.mozilla.org/Security/Server_Side_TLS
 ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
@@ -32,12 +32,10 @@ ssl_session_timeout 5m;
 ssl_session_cache shared:SSL:5m;
 
 
-# Enable HSTS for the website and its subdomains, and check the preload list.
-# The includeSubdomains is great but dangerous : if at some point we have
-# a subdomain hosted on another server, we'd have to make sure they have a correct
-# SSL cert, because the domain will be HSTS-ed... Anyway, we shouldn't have this
-# problem.
-add_header Strict-Transport-Security "max-age=15768000; includeSubDomains; preload";
+# Enable HSTS for the website and its subdomains, and request preloading.
+# More info on prelaoding (and the site's current status) is at
+# https://hstspreload.org/?domain=worldcubeassociation.org
+add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload";
 
 # Enable ssl stapling
 ssl_stapling on;

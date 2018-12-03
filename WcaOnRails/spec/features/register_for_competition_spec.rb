@@ -3,9 +3,9 @@
 require "rails_helper"
 
 RSpec.feature "Registering for a competition" do
-  let(:user) { FactoryGirl.create :user }
-  let(:delegate) { FactoryGirl.create :delegate }
-  let(:competition) { FactoryGirl.create :competition, :registration_open, delegates: [delegate], showAtAll: true }
+  let(:user) { FactoryBot.create :user }
+  let(:delegate) { FactoryBot.create :delegate }
+  let(:competition) { FactoryBot.create :competition, :registration_open, delegates: [delegate], showAtAll: true }
 
   context "signed in as user" do
     before :each do
@@ -42,7 +42,7 @@ RSpec.feature "Registering for a competition" do
     end
 
     context "editing registration" do
-      let!(:registration) { FactoryGirl.create(:registration, user: user, competition: competition, guests: 0) }
+      let!(:registration) { FactoryBot.create(:registration, user: user, competition: competition, guests: 0) }
 
       scenario "Users changes number of guests" do
         expect(registration.guests).to eq 0
@@ -81,7 +81,8 @@ RSpec.feature "Registering for a competition" do
   end
 
   context "signed in as delegate" do
-    let(:registration) { FactoryGirl.create(:registration, user: user, competition: competition) }
+    let(:registration) { FactoryBot.create(:registration, user: user, competition: competition) }
+    let(:delegate_registration) { FactoryBot.create(:registration, :accepted, user: delegate, competition: competition) }
     before :each do
       sign_in delegate
     end
@@ -91,6 +92,19 @@ RSpec.feature "Registering for a competition" do
       fill_in "Guests", with: 1
       click_button "Update Registration"
       expect(registration.reload.guests).to eq 1
+    end
+
+    scenario "updating his own registration" do
+      expect(delegate_registration.guests).to eq 10
+
+      visit competition_register_path(competition)
+
+      expect(page).to have_text("Your registration has been accepted!")
+      fill_in "Guests", with: "2"
+      click_button "Update Registration"
+
+      expect(page).to have_text("Your registration has been accepted!")
+      expect(delegate_registration.reload.guests).to eq 2
     end
 
     scenario "deleting registration" do

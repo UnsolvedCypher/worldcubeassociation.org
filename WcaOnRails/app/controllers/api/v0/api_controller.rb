@@ -28,27 +28,33 @@ class Api::V0::ApiController < ApplicationController
   def scramble_program
     render json: {
       "current" => {
-        "name" => "TNoodle-WCA-0.11.5",
+        "name" => "TNoodle-WCA-0.13.5",
         "information" => "#{root_url}regulations/scrambles/",
-        "download" => "#{root_url}regulations/scrambles/tnoodle/TNoodle-WCA-0.11.5.jar",
+        "download" => "#{root_url}regulations/scrambles/tnoodle/TNoodle-WCA-0.13.5.jar",
       },
       "allowed" => [
-        "TNoodle-WCA-0.11.5",
+        "TNoodle-WCA-0.13.5",
       ],
       "history" => [
-        "TNoodle-0.7.4",       # 2013-01-01
-        "TNoodle-0.7.5",       # 2013-02-26
-        "TNoodle-0.7.8",       # 2013-04-26
-        "TNoodle-0.7.12",      # 2013-10-01
-        "TNoodle-WCA-0.8.0",   # 2014-01-13
-        "TNoodle-WCA-0.8.1",   # 2014-01-14
-        "TNoodle-WCA-0.8.2",   # 2014-01-28
-        "TNoodle-WCA-0.8.4",   # 2014-02-10
-        "TNoodle-WCA-0.9.0",   # 2015-03-30
-        "TNoodle-WCA-0.10.0",  # 2015-06-30
-        "TNoodle-WCA-0.11.1",  # 2016-04-04
-        "TNoodle-WCA-0.11.3",  # 2016-10-17
-        "TNoodle-WCA-0.11.5",  # 2016-12-12
+        "TNoodle-0.7.4",
+        "TNoodle-0.7.5",
+        "TNoodle-0.7.8",
+        "TNoodle-0.7.12",
+        "TNoodle-WCA-0.8.0",
+        "TNoodle-WCA-0.8.1",
+        "TNoodle-WCA-0.8.2",
+        "TNoodle-WCA-0.8.4",
+        "TNoodle-WCA-0.9.0",
+        "TNoodle-WCA-0.10.0",
+        "TNoodle-WCA-0.11.1",
+        "TNoodle-WCA-0.11.3",
+        "TNoodle-WCA-0.11.5",
+        "TNoodle-WCA-0.12.0",
+        "TNoodle-WCA-0.13.1",
+        "TNoodle-WCA-0.13.2",
+        "TNoodle-WCA-0.13.3",
+        "TNoodle-WCA-0.13.4",
+        "TNoodle-WCA-0.13.5",
       ],
     }
   end
@@ -57,7 +63,7 @@ class Api::V0::ApiController < ApplicationController
   end
 
   def search(*models)
-    query = params[:q]
+    query = params[:q]&.slice(0...SearchResultsController::SEARCH_QUERY_LIMIT)
     unless query
       render status: :bad_request, json: { error: "No query specified" }
       return
@@ -109,6 +115,53 @@ class Api::V0::ApiController < ApplicationController
 
   def delegates
     paginate json: User.delegates
+  end
+
+  def records
+    concise_results_date = Timestamp.find_by(name: "compute_auxiliary_data_end").date
+    cache_key = "records/#{concise_results_date.iso8601}"
+    json = Rails.cache.fetch(cache_key) do
+      records = ActiveRecord::Base.connection.exec_query <<-SQL
+        SELECT 'single' type, MIN(best) value, countryId country_id, eventId event_id
+        FROM ConciseSingleResults
+        GROUP BY countryId, eventId
+        UNION ALL
+        SELECT 'average' type, MIN(average) value, countryId country_id, eventId event_id
+        FROM ConciseAverageResults
+        GROUP BY countryId, eventId
+      SQL
+      records = records.to_hash
+      {
+        world_records: records_by_event(records),
+        continental_records: records.group_by { |record| Country.c_find(record["country_id"]).continentId }.transform_values!(&method(:records_by_event)),
+        national_records: records.group_by { |record| record["country_id"] }.transform_values!(&method(:records_by_event)),
+      }
+    end
+    render json: json
+  end
+
+  def export_public
+    sql_zips = Dir.glob(Rails.root.join("../webroot/results/misc/*.sql.zip")).sort!
+    tsv_zips = Dir.glob(Rails.root.join("../webroot/results/misc/*.tsv.zip")).sort!
+
+    last_sql = File.basename(sql_zips.last)
+    last_tsv = File.basename(tsv_zips.last)
+    m = /WCA_export(\d+)_(.*).sql.zip/.match(last_sql)
+    date = Time.parse(m[2])
+
+    render json: {
+      export_date: date.iso8601,
+      sql_url: "#{root_url}results/misc/#{last_sql}",
+      tsv_url: "#{root_url}results/misc/#{last_tsv}",
+    }
+  end
+
+  private def records_by_event(records)
+    records.group_by { |record| record["event_id"] }.transform_values! do |event_records|
+      event_records.group_by { |record| record["type"] }.transform_values! do |type_records|
+        type_records.map { |record| record["value"] }.min
+      end
+    end
   end
 
   # Find the user that owns the access token.

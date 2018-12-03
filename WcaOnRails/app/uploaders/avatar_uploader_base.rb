@@ -3,6 +3,14 @@
 class AvatarUploaderBase < CarrierWave::Uploader::Base
   include CarrierWave::MiniMagick
 
+  # Copied from https://makandracards.com/makandra/12323-carrierwave-auto-rotate-tagged-jpegs.
+  process :auto_orient
+  def auto_orient
+    manipulate! do |image|
+      image.tap(&:auto_orient)
+    end
+  end
+
   def self.missing_avatar_thumb_url
     @@missing_avatar_thumb_url ||= ActionController::Base.helpers.asset_url("missing_avatar_thumb.png", host: ENVied.ROOT_URL).freeze
   end
@@ -52,9 +60,9 @@ class AvatarUploaderBase < CarrierWave::Uploader::Base
   def filename
     if original_filename
       # This is pretty gross. We only want to reuse the existing filename if
-      # a new avatar isn't being uploaded, we look at the *_change attribute to
+      # a new avatar isn't being uploaded, we look at the saved_change_to_* attribute to
       # determine if that happened.
-      if model && model.read_attribute(mounted_as).present? && !model.send(:"#{mounted_as}_change")
+      if model && model.read_attribute(mounted_as).present? && !model.send(:"saved_change_to_#{mounted_as}?")
         model.read_attribute(mounted_as)
       else
         # new filename

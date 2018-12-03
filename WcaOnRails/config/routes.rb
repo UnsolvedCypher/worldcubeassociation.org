@@ -31,6 +31,7 @@ Rails.application.routes.draw do
   post 'admin/avatars' => 'admin/avatars#update_all'
 
   get 'competitions/mine' => 'competitions#my_competitions', as: :my_comps
+  get 'competitions/for_senior(/:user_id)' => 'competitions#for_senior', as: :competitions_for_senior
   resources :competitions, only: [:index, :show, :edit, :update, :new, :create] do
     get 'results/podiums' => 'competitions#show_podiums'
     get 'results/all' => 'competitions#show_all_results'
@@ -49,6 +50,9 @@ Rails.application.routes.draw do
     get 'tabs/:id/reorder' => "competition_tabs#reorder", as: :tab_reorder
   end
 
+  get 'competitions/:competition_id/submit-results' => 'results_submission#new', as: :submit_results_edit
+  post 'competitions/:competition_id/submit-results' => 'results_submission#create', as: :submit_results
+
   get 'competitions/:competition_id/report/edit' => 'delegate_reports#edit', as: :delegate_report_edit
   get 'competitions/:competition_id/report' => 'delegate_reports#show', as: :delegate_report
   patch 'competitions/:competition_id/report' => 'delegate_reports#update'
@@ -57,10 +61,14 @@ Rails.application.routes.draw do
   get 'competitions/:id/payment_setup' => 'competitions#payment_setup', as: :competitions_payment_setup
   get 'stripe-connect' => 'competitions#stripe_connect', as: :competitions_stripe_connect
   get 'competitions/:id/events/edit' => 'competitions#edit_events', as: :edit_events
+  get 'competitions/:id/schedule/edit' => 'competitions#edit_schedule', as: :edit_schedule
   patch 'competitions/:id/events' => 'competitions#update_events', as: :update_events
   get 'competitions/edit/nearby_competitions' => 'competitions#nearby_competitions', as: :nearby_competitions
   get 'competitions/edit/time_until_competition' => 'competitions#time_until_competition', as: :time_until_competition
   get 'competitions/:id/edit/clone_competition' => 'competitions#clone_competition', as: :clone_competition
+
+  get "media/validate" => 'media#validate', as: :validate_media
+  resources :media, only: [:index, :new, :create, :edit, :update, :destroy]
 
   resources :persons, only: [:index, :show]
 
@@ -82,6 +90,8 @@ Rails.application.routes.draw do
   get 'delegate/crash-course' => 'delegates_panel#crash_course'
   get 'delegate/crash-course/edit' => 'delegates_panel#edit_crash_course'
   patch 'delegate/crash-course' => 'delegates_panel#update_crash_course'
+  get 'delegate/pending-claims(/:user_id)' => 'delegates_panel#pending_claims_for_subordinate_delegates', as: 'pending_claims'
+  get 'delegate/seniors' => 'delegates_panel#seniors'
   resources :notifications, only: [:index]
 
   root 'posts#index'
@@ -100,14 +110,19 @@ Rails.application.routes.draw do
   patch 'translations/update' => 'translations#update'
 
   get 'about' => 'static_pages#about'
+  get 'documents' => 'static_pages#documents'
   get 'delegates' => 'static_pages#delegates'
+  get 'disclaimer' => 'static_pages#disclaimer'
   get 'organizations' => 'static_pages#organizations'
   get 'contact' => 'static_pages#contact'
+  get 'privacy' => 'static_pages#privacy'
   get 'faq' => 'static_pages#faq'
   get 'score-tools' => 'static_pages#score_tools'
   get 'logo' => 'static_pages#logo'
   get 'wca-workbook-assistant' => 'static_pages#wca_workbook_assistant'
   get 'wca-workbook-assistant-versions' => 'static_pages#wca_workbook_assistant_versions'
+  get 'organizer-guidelines' => 'static_pages#organizer_guidelines'
+  get 'tutorial' => redirect('/files/WCA_Competition_Tutorial.pdf', status: 302)
 
   get 'contact/website' => 'contacts#website'
   post 'contact/website' => 'contacts#website_create'
@@ -118,6 +133,8 @@ Rails.application.routes.draw do
   get '/regulations/*id' => 'regulations#show'
 
   get '/admin' => 'admin#index'
+  get '/admin/all-voters' => 'admin#all_voters', as: :eligible_voters
+  get '/admin/leader-senior-voters' => 'admin#leader_senior_voters', as: :leader_senior_voters
   get '/admin/merge_people' => 'admin#merge_people'
   post '/admin/merge_people' => 'admin#do_merge_people'
   get '/admin/edit_person' => 'admin#edit_person'
@@ -125,10 +142,11 @@ Rails.application.routes.draw do
   get '/admin/person_data' => 'admin#person_data'
   get '/admin/compute_auxiliary_data' => 'admin#compute_auxiliary_data'
   get '/admin/do_compute_auxiliary_data' => 'admin#do_compute_auxiliary_data'
+  get '/admin/update_statistics' => 'admin#update_statistics'
 
   get '/search' => 'search_results#index'
 
-  get '/render_markdown' => 'markdown_renderer#render_markdown'
+  post '/render_markdown' => 'markdown_renderer#render_markdown'
 
   patch '/update_locale/:locale' => 'application#update_locale', as: :update_locale
 
@@ -141,12 +159,17 @@ Rails.application.routes.draw do
     resources :forum_topics, only: [:show]
   end
 
+  resources :incidents do
+    patch '/mark_as/:kind' => 'incidents#mark_as', as: :mark_as
+  end
+
   namespace :api do
-    get '/', to: redirect('/api/v0')
+    get '/', to: redirect('/api/v0', status: 302)
     namespace :v0 do
       get '/' => 'api#help'
       get '/me' => 'api#me'
       get '/auth/results' => 'api#auth_results'
+      get '/export/public' => 'api#export_public'
       get '/scramble-program' => 'api#scramble_program'
       get '/search' => 'api#omni_search'
       get '/search/posts' => 'api#posts_search'
@@ -156,9 +179,15 @@ Rails.application.routes.draw do
       get '/users/:id' => 'api#show_user_by_id', constraints: { id: /\d+/ }
       get '/users/:wca_id' => 'api#show_user_by_wca_id'
       get '/delegates' => 'api#delegates'
+      get '/persons' => "persons#index"
+      get '/persons/:wca_id' => "persons#show", as: :person
       resources :competitions, only: [:index, :show] do
         get '/wcif' => 'competitions#show_wcif'
+        patch '/wcif/events' => 'competitions#update_events_from_wcif', as: :update_events_from_wcif
+        patch '/wcif/persons' => 'competitions#update_persons_from_wcif', as: :update_persons_from_wcif
+        patch '/wcif/schedule' => 'competitions#update_schedule_from_wcif', as: :update_schedule_from_wcif
       end
+      get '/records' => "api#records"
     end
   end
 end

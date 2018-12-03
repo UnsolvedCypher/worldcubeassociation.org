@@ -2,6 +2,11 @@
 
 <%= render layout: "nav" do %>
 
+  <p><b><%= t('registrations.registration_requirements') %></b>
+  </p>
+  <%= render "competitions/registration_requirements", show_links_to_register_page: false %>
+  <hr/>
+
   <% opens_in_days = distance_of_time_in_words_to_now(@competition.registration_open) %>
   <% closes_in_days = distance_of_time_in_words_to_now(@competition.registration_close) %>
 
@@ -52,6 +57,9 @@
           </ul>
         <% end %>
       <% else %>
+        <% if @competition.registration_full? %>
+          <%= alert :warning, t('registrations.registration_full', competitor_limit: @competition.competitor_limit) %>
+        <% end %>
         <p>
           <%= t 'registrations.can_register', comp: @competition.name %>
         </p>

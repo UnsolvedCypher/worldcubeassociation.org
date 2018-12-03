@@ -68,11 +68,16 @@ EOL
 fi
 
 if [ "$environment" != "development" ]; then
-  # Download database export and other secrets that are required to provision a new server.
+  # Download secrets that are required to provision a new server.
   # You'll need ssh access to worldcubeassociation.org as user `cubing`. Contact
   # software-admins@worldcubeassociation.org if you need access.
   echo "Downloading secrets from worldcubeassociation.org..."
   rsync -az -e "ssh -o StrictHostKeyChecking=no" --info=progress2 cubing@worldcubeassociation.org:/home/cubing/worldcubeassociation.org/secrets/ $repo_root/secrets
+
+  if [ "$environment" == "staging" ]; then
+    echo "Downloading certificate from staging.worldcubeassociation.org..."
+    rsync -az -e "ssh -o StrictHostKeyChecking=no" --info=progress2 cubing@staging.worldcubeassociation.org:/home/cubing/worldcubeassociation.org/secrets/https/ $repo_root/secrets/https
+  fi
 fi
 
 # Install chef client

@@ -4,11 +4,18 @@ class TranslationsController < ApplicationController
   before_action :authenticate_user!, except: [:index]
 
   def self.bad_i18n_keys
-    @bad_keys ||= (I18n.available_locales - [:en]).each_with_object({}) do |locale, hash|
-      ref_english = Locale.new('en')
-      missing, unused, outdated = Locale.new(locale, true).compare_to(ref_english)
-      hash[locale] = { missing: missing, unused: unused, outdated: outdated }
-    end
+    @bad_keys ||= begin
+                    english = locale_to_translation('en')
+                    (I18n.available_locales - [:en]).map do |locale|
+                      [locale, locale_to_translation(locale).compare_to(english)]
+                    end.to_h
+                  end
+  end
+
+  def self.locale_to_translation(locale)
+    locale = locale.to_s
+    filename = Rails.root.join('config', 'locales', "#{locale}.yml")
+    WcaI18n::Translation.new(locale, File.read(filename))
   end
 
   def index
@@ -39,12 +46,45 @@ class TranslationsController < ApplicationController
     Octokit.create_ref(origin_repo, "heads/#{branch_name}", upstream_sha)
     current_content_sha = Octokit.content(origin_repo, path: file_path, ref: branch_name)[:sha]
     Octokit.update_content(origin_repo, file_path, message, current_content_sha, content, branch: branch_name)
-    @pr_url = Octokit.create_pull_request(upstream_repo, "master", "#{user_login}:#{branch_name}", message, pr_description_for(current_user))[:html_url]
+    @pr_url = Octokit.create_pull_request(upstream_repo, "master", "#{user_login}:#{branch_name}", message, pr_description_for(current_user, locale))[:html_url]
   end
 
-  private def pr_description_for(user)
+  # rubocop:disable Style/NumericLiterals
+  VERIFIED_TRANSLATORS_BY_LOCALE = {
+    "cs" => [8583],
+    "da" => [6777],
+    "de" => [870],
+    "es" => [7340, 1439],
+    "fi" => [39072],
+    "fr" => [277],
+    "hr" => [46],
+    "hu" => [378],
+    "id" => [1285],
+    "it" => [397, 454],
+    "ja" => [32229, 1118],
+    "ko" => [14],
+    "nl" => [1, 41519],
+    "pl" => [6008],
+    "pt" => [331],
+    "pt-BR" => [18],
+    "ro" => [11918],
+    "ru" => [140],
+    "sk" => [7922],
+    "sl" => [1381],
+    "vi" => [7158],
+    "zh-CN" => [9],
+    "zh-TW" => [38],
+  }.freeze
+  # rubocop:enable Style/NumericLiterals
+
+  private def pr_description_for(user, locale)
     info = ["WCA Account ID: *#{user.id}*"]
-    info.unshift("WCA ID: *#{user.wca_id}*") if user.wca_id
-    "Submitted by #{user.name} (#{info.join(', ')})."
+    info.unshift("WCA ID: *[#{user.wca_id}](#{person_url(user.wca_id)})*") if user.wca_id
+    verification_info = if VERIFIED_TRANSLATORS_BY_LOCALE[locale]&.include?(user.id)
+                          ":heavy_check_mark: This translation comes from a verified translator for this language."
+                        else
+                          ":warning: This translation doesn't come from a verified translator for this language."
+                        end
+    "Submitted by #{user.name} (#{info.join(', ')}).\n\n#{verification_info}"
   end
 end

@@ -25,40 +25,56 @@ en:
     XA: "Multiple Countries (Asia)"
     XE: "Multiple Countries (Europe)"
     XS: "Multiple Countries (South America)"
+    XM: "Multiple Countries (Americas)"
     MO: "Macao"
     HK: "Hong Kong"
     KR: "Korea"
   #context: Continent name
   continents:
-    AfR: "Africa"
-    AsR: "Asia"
-    ER: "Europe"
-    NAR: "North America"
-    OcR: "Oceania"
-    SAR: "South America"
+    "Multiple Continents": "Multiple Continents"
+    Africa: "Africa"
+    Asia: "Asia"
+    Europe: "Europe"
+    "North America": "North America"
+    Oceania: "Oceania"
+    "South America": "South America"
   #context: Event name
   events:
-    "333": "Rubik's Cube"
+    "333": "3x3x3 Cube"
+    "222": "2x2x2 Cube"
     "444": "4x4x4 Cube"
     "555": "5x5x5 Cube"
-    "222": "2x2x2 Cube"
-    333bf: "3x3x3 Blindfolded"
-    333oh: "3x3x3 One-Handed"
-    333fm: "3x3x3 Fewest Moves"
-    333ft: "3x3x3 With Feet"
-    minx: "Megaminx"
-    pyram: "Pyraminx"
-    sq1: "Square-1"
-    clock: "Rubik's Clock"
-    skewb: "Skewb"
     "666": "6x6x6 Cube"
     "777": "7x7x7 Cube"
+    333bf: "3x3x3 Blindfolded"
+    333fm: "3x3x3 Fewest Moves"
+    333oh: "3x3x3 One-Handed"
+    333ft: "3x3x3 With Feet"
+    clock: "Clock"
+    minx: "Megaminx"
+    pyram: "Pyraminx"
+    skewb: "Skewb"
+    sq1: "Square-1"
     444bf: "4x4x4 Blindfolded"
     555bf: "5x5x5 Blindfolded"
     333mbf: "3x3x3 Multi-Blind"
-    magic: "Rubik's Magic"
+    magic: "Magic"
     mmagic: "Master Magic"
-    333mbo: "Rubik's Cube: Multiple blind old style"
+    333mbo: "3x3x3 Multi-Blind Old Style"
+  #context: Formats name
+  formats:
+    "1": "Best of 1"
+    "2": "Best of 2"
+    "3": "Best of 3"
+    "a": "Average of 5"
+    "m": "Mean of 3"
+    #context: short name alternative
+    short:
+      "1": "Bo1"
+      "2": "Bo2"
+      "3": "Bo3"
+      "a": "Ao5"
+      "m": "Mo3"
   #context: Round name
   rounds:
     "0":
@@ -94,32 +110,38 @@ en:
     "h":
       name: "Combined qualification"
       cellName: "Combined qualification"
+  #context: attempt name
+  attempts:
+    attempt_name: "Attempt %{number}"
   round:
-    name: "%{event} Round %{number}"
+    #context: e.g. event_name can be "3x3x3 Cube", and round_name can be "Combined First round"
+    name: "%{event_name} %{round_name}"
   #context: Words used to describe the requirement to advance to the next round
   advancement_condition:
-    ranking: "Top %{ranking} advance to round %{next_round_number}"
-    percent: "Top %{percent}% advance to round %{next_round_number}"
+    ranking: "Top %{ranking} advance to next round"
+    percent: "Top %{percent}% advance to next round"
     attempt_result:
-      time: "Best solve ≤ %{time} advances to round %{next_round_number}"
-      moves: "Best solve ≤ %{moves} moves advances to round %{next_round_number}"
-      points: "Best solve ≥ %{points} points advances to round %{next_round_number}"
+      time: "Best solve < %{time} advances to next round"
+      moves: "Best solve < %{moves} moves advances to next round"
+      points: "Best solve > %{points} points advances to next round"
   #context: Words used to describe combined round cutoffs
   cutoff:
     time:
-      one: "%{count} attempt to get ≤ %{time}"
-      other: "%{count} attempts to get ≤ %{time}"
+      one: "%{count} attempt to get < %{time}"
+      other: "%{count} attempts to get < %{time}"
     moves:
-      one: "%{count} attempt to get ≤ %{moves} moves"
-      other: "%{count} attempts to get ≤ %{moves} moves"
+      one: "%{count} attempt to get < %{moves} moves"
+      other: "%{count} attempts to get < %{moves} moves"
     points:
-      one: "%{count} attempt to get ≥ %{points} points"
-      other: "%{count} attempts to get ≥ %{points} points"
+      one: "%{count} attempt to get > %{points} points"
+      other: "%{count} attempts to get > %{points} points"
   #context: Words used to describe time limits
   time_limit:
     cumulative:
       one_round: "%{time} cumulative"
       across_rounds: "%{time} total for %{rounds}"
+    333fm: "1 hour"
+    333mbf: "10:00.00 per cube, up to 60:00.00"
   #context: Common word used in multiple places on the website
   common:
     continent: "Continent"
@@ -147,11 +169,13 @@ en:
     these_events:
       one: "this event"
       other: "these %{count} events"
-  delegate_statuses:
-    candidate_delegate: "Candidate Delegate"
-    delegate: "Delegate"
-    senior_delegate: "Senior Delegate"
-    board_member: "Board Member"
+    search_site: "Search site"
+    filter: Filter
+    delete: Delete
+    date_placeholder: "YYYY-MM-DD"
+    datetime_placeholder: "YYYY-MM-DD HH:MM"
+    #context: the time format in the schedule table. Please set this to *exactly* "12h" to use am/pm time, or "24h" for 24 hours time (do not translate the 'h' or anything).
+    time_format: "12h"
   #context: Key used in the OAuth part of the site (checkout the /oauth/applications page for more details)
   oauth:
     applications:
@@ -165,6 +189,11 @@ en:
       secret: "Secret"
       scopes: "Scopes"
       callback_urls: "Callback Urls"
+  helpers:
+    submit:
+      competition_medium:
+        create: "Submit media"
+        update: "Update media"
   activerecord:
     #context: This key is used as a label for forms regarding
     attributes:
@@ -176,12 +205,12 @@ en:
         login: "Email or WCA ID"
         country_iso2: "Citizenship"
         dob: "Birthdate"
-        dob_verification: "Birthdate"
+        dob_verification: "Your Birthdate"
         gender: "Gender"
         email: "Email"
         password: "Password"
         current_password: "Current password"
-        password_confirmation: "Password confirmation"
+        password_confirmation: "Re-enter password"
         remember_me: "Remember me"
         pending_avatar: "Upload new avatar"
         remove_avatar: "Remove avatar"
@@ -195,9 +224,10 @@ en:
       #context: a competition
       competition:
         id: "ID"
-        isConfirmed: "Do not let organizers edit this competition"
+        confirmed: "Do not let organizers edit this competition"
         showAtAll: "Make competition visible to the public"
         name: "Name"
+        name_reason: "The reason for the name"
         cellName: "Competition nickname"
         countryId: "Country"
         cityName: "City name"
@@ -208,14 +238,14 @@ en:
         end_date: "End date"
         external_website: "Website"
         generate_website: "I would like to use WCA website instead of an external one for additional information."
-        base_entry_fee_lowest_denomination: "Base entry fee"
+        base_entry_fee_lowest_denomination: "Base registration fee"
         currency_code: "Currency code"
-        delegate_ids: "WCA delegate(s)"
+        delegate_ids: "WCA Delegate(s)"
         organizer_ids: "Organizer(s)"
         contact: "Contact"
         information: "Information"
         use_wca_registration: "I would like to use the WCA website for registration"
-        competitor_limit_enabled: "I would like to specify a limit on the number of competitors that can enter this competition."
+        competitor_limit_enabled: "Competitor limit"
         competitor_limit: "Maximum number of competitors"
         competitor_limit_reason: "The reason for the competitor limit"
         guests_enabled: "Guests"
@@ -226,6 +256,17 @@ en:
         clone_tabs: "I would like to clone all tabs with additional information as well"
         competition_events: "Events"
         enable_donations: "I want to enable donations additionally to collecting the registration fees"
+        championship_type: "Championship type"
+        extra_registration_requirements: "Extra registration requirements"
+        on_the_spot_registration: "On the spot registrations"
+        on_the_spot_entry_fee_lowest_denomination: "On the spot base registration fee"
+        refund_policy_percent: "Percent to be refunded"
+        refund_policy_limit_date: "Limit date for refunds"
+        guests_entry_fee_lowest_denomination: "Entry fee for guests"
+        regulation_z1: "I would like to require competitors to submit puzzles during registration as per Regulation Z1)"
+        regulation_z1_reason: "Reason for Z1)"
+        regulation_z3: "I would like to select competitors who directly qualify for certain rounds of certain events based on the results of specific previous competitions as per Regulation Z3)"
+        regulation_z3_reason: "Reason for Z3)"
       #context: a registration to a competition
       registration:
         guests: "Guests"
@@ -274,6 +315,47 @@ en:
       #context: a vote
       vote:
         comment: "Comment"
+      #context: an incident
+      incident:
+        title: "Title"
+        private_description: "Description (private)"
+        private_wrc_decision: "Decision (private)"
+        public_summary: "Summary (public)"
+        digest_worthy: "Digest worthy"
+        tags: "Tags"
+        competition_id: "Happened during"
+      competition_medium:
+        competitionId: "Competition"
+        type: "Type"
+        text: "Text"
+        uri: "Link"
+        submitterName: "Submitter name"
+        submitterEmail: "Submitter email"
+        submitterComment: "Submitter comment"
+        status: "Status"
+  enums:
+    user:
+      gender:
+        m: "Male"
+        f: "Female"
+        o: "Other"
+      delegate_status:
+        candidate_delegate: "Candidate Delegate"
+        delegate: "Delegate"
+        senior_delegate: "Senior Delegate"
+    person:
+      gender:
+        m: "Male"
+        f: "Female"
+        o: "Other"
+    competition_medium:
+      status:
+        accepted: "Accepted"
+        pending: "Pending"
+      type:
+        report: "Report"
+        article: "Article"
+        multimedia: "Multimedia"
   #context: This key is an element of a form on the website
   simple_form:
     "yes": "Yes"
@@ -288,10 +370,19 @@ en:
       default_message: "Please review the problems below:"
     #context: and a hint given about a specific field
     hints:
+      #context: for an incident
+      incident:
+        title: "Keep in mind this is public, and that you have to fill this in English!"
+        private_description: "A description of the incident which can only be viewed by Delegates. Please fill this in English."
+        private_wrc_decision: "The final WRC decision, including private details. Please fill this in English."
+        public_summary: "An overall description of the incident and its decision, to be displayed publicly. Please fill this in English."
+        digest_worthy: ""
+        tags: ""
+        competition_id: ""
       #context: for a user
       user:
         dob: "Enter your date of birth in the format YYYY-MM-DD."
-        name: "Enter your full name correctly, for example <strong>Stefan Pochmann</strong>. Not sloppily like <strong>s pochman</strong>."
+        name: "Enter your full name correctly, for example <strong>Stefan Pochmann</strong>. Not sloppily like <strong>s pochman</strong>.<br/>Middle names (either full or as initials) are optional."
         email: "Changing your email will require confirming the new email."
         pending_avatar: "After uploading a new avatar, you will have to wait for the WCA Results Team to approve it."
         country_iso2: ""
@@ -315,32 +406,45 @@ en:
         name: "The full name of the competition including the year at the end (e.g., Danish Open 2016). Be sure to capitalize. The name must contain only alphanumeric characters, dashes(-), ampersands(&), periods(.), colons(:), apostrophes('), and spaces( )."
         cellName: "A short name for displaying. If the name of the competition is already short, you can re-use the name (e.g., Europe 2006)."
         cityName: "Name of the city and state (if applicable) where the competition takes place. Do not include country (e.g., Paris OR San Francisco, California)."
-        information: "Some information text about the competition (e.g., Euro 2006 is open to citizens of the European countries and Israel)."
-        delegate_ids: "WCA delegates for the competition."
+        information: "Important information that competitors should know. It will be displayed on the competition main page. <br/>Please fill this out <b>in English</b> and whatever other languages your competitors speak."
+        delegate_ids: "WCA Delegates for the competition."
         organizer_ids: "Competition organizers (they need an account to be listed here)."
         external_website: "The website of the competition. Must be a valid http(s) url."
         registration_open: "Note: Registration open and close are in UTC time"
-        remarks: "Some additional information you want to pass on to the board. For example, reasons why this competition was requested less than one month away, if applicable."
+        remarks_html: "Some additional information you want to pass on to the WCAT. For example, elaborate your reasons if this competition is requested less than four weeks away, or if you are requesting the application of %{link}. Please fill this out in English!"
         clone_tabs: ""
         countryId: ""
         end_date: ""
         generate_website: ""
-        base_entry_fee_lowest_denomination: 'The base entry fee for the competition. The entry fee will be displayed on the competition information page and the registration page if used.'
-        currency_code: "The currency code for entry fees."
+        base_entry_fee_lowest_denomination: 'The base registration fee for the competition. It will be displayed on the competition information page and the registration page if used. If this is set to 0, a sentence will be displayed saying that registrations will be accepted for free.'
+        currency_code: "The currency code for fees."
         guests_enabled: ""
         enable_donations: ""
         id: ""
-        isConfirmed: ""
+        confirmed: ""
         receive_registration_emails: ""
         registration_close: ""
         showAtAll: ""
         start_date: ""
         use_wca_registration: ""
-        competitor_limit_enabled: "For now this number is informational only, and does not yet prevent more people from registering. We are working on adding explicit support for this to the registration flow, but it requires some other work first."
-        competitor_limit: "The number of competitors allowed in this competition."
-        competitor_limit_reason: "What is the reason for the limit on competitors?"
+        competitor_limit_enabled: "Although it is not required by the Regulations to provide a competitor limit, it's highly recommended to do so."
+        competitor_limit: "The number of competitors allowed in this competition. For now this number is informational only, and does not yet prevent more people from registering. We are working on adding explicit support for this to the registration flow, but it requires some other work first."
+        competitor_limit_reason: "What is the reason for the limit on competitors? Please fill this out in English!"
         venueAddress: ""
+        championship_type: ""
+        extra_registration_requirements: "Please indicate here any extra registration requirements not covered above, like for example directions on how to pay. <br/>Please fill this out <b>in English</b> and whatever other languages your competitors speak; this will be displayed on the competition's information page, as well on the registration page if you are using the WCA website registrations."
+        on_the_spot_registration: ""
+        on_the_spot_entry_fee_lowest_denomination: "If this is set to 0, a sentence will be displayed saying that on the spot registrations will be accepted for free."
+        refund_policy_percent: "For now this number is informational only, refunds will have to be issued manually. If this is set to 0, a sentence will be displayed saying that registration fees won't be refunded under any circumstance."
+        refund_policy_limit_date: "Date after which no more refunds will be issued."
+        guests_entry_fee_lowest_denomination: "For now this number is informational only, guest fees cannot be managed through this website. If this is set to 0, a sentence will be displayed saying that spectators can attend for free."
+        regulation_z1: ""
+        regulation_z1_reason: "Please elaborate here why you would like to adopt Regulation Z1). Please fill this out in English!"
+        regulation_z3: ""
+        regulation_z3_reason: "Please elaborate here why you would like to adopt Regulation Z3). Please fill this out in English!"
       website_contact:
+        inquiry: ""
+        competition_id: ""
         message: ""
         name: ""
         your_email: ""
@@ -349,7 +453,7 @@ en:
         your_email: ""
         wca_id: ""
         dob: "Your correct day of birth in the format YYYY-MM-DD"
-        document: "To prove your identity and your correct date of birth to us, you have to attach a picture of any legal document (identity card, driver license, student card, passport, birth certificate, ...) where your name and date of birth are visible and understandable for an English speaker."
+        document: "To prove your identity and your correct date of birth to us, you have to attach a picture of any legal document (identity card, driver license, student card, passport, birth certificate, ...) where your name and date of birth are visible and understandable for an English speaker (or contact your local WCA Delegate if you don't have such a document)."
       #context: for a post
       post:
         body: "Use the &lt;!-- break --&gt; tag to show a preview on the home page. Any post on the home page will show all text before this divider. The actual post will display the full body."
@@ -363,7 +467,7 @@ en:
         equipment: "Number and type of timers and displays used in the competition. Please remove the line(s) of equipment which you didn't use."
         venue: "Talk about rooms, light, public access, distribution of the zones (solving, scrambling, waiting, score-taking), if you set up different solving stages, problems that arose (for example, noise) and how you solved them... Please, be concise and do not report irrelevant details."
         organization: "Talk about the organization team and how they worked out the competition, if you got involved on it, their previous experience and if you noticed progress on their work, if they were professional and active the competition days, problems that arose (e.g., getting behind schedule) and how they solved them... Please, be concise and do not report irrelevant details."
-        incidents: "Report any incidents that you consider worth mentioning. Number the incidents starting from 1., so that other delegates can comment referring to them by their numbers. Please make sure to mention only concrete cases, not generic events (e.g., regular +2 and DNF). Feel free to ask for delegates' or WRC's  feedback on any of them. If you'd like to have the WDC involved in some of them, make sure to state this request clearly."
+        incidents: "Report any incidents that you consider worth mentioning. Number the incidents starting from 1., so that other Delegates can comment referring to them by their numbers. Please make sure to mention only concrete cases, not generic events (e.g., regular +2 and DNF). Feel free to ask for Delegates' or WRC's  feedback on any of them. If you'd like to have the WDC involved in some of them, make sure to state this request clearly."
         remarks: "Talk about any other detail that you'd like to share (e.g., improvement/regression within the community, future plans for this region). If for the sake of conciseness you left something unsaid in the previous sections, feel free to comment them here."
         discussion_url: ""
       #context: for a competition tab
@@ -387,11 +491,21 @@ en:
         comments: ""
         guests: ""
         status: ""
-      team:
-        friendly_id: ""
-        name: ""
       vote:
         comment: ""
+      competition_medium:
+        competitionId: ""
+        type: ""
+        text: ""
+        uri: ""
+        submitterName: ""
+        submitterEmail: ""
+        submitterComment: ""
+        status: ""
+      results_submission:
+        schedule_url: ""
+        results_file: ""
+        message: ""
     #context: and a label for an option
     options:
       #context: about registration
@@ -406,10 +520,18 @@ en:
         guests_enabled:
           "true": "Ask about guests"
           "false": "Do NOT ask about guests"
+        competitor_limit_enabled:
+          "true": "I want to specify a competitor limit"
+          "false": "I DON'T WANT to specify a competitor limit"
+        on_the_spot_registration:
+          "true": "On the spot registrations will be accepted"
+          "false": "On the spot registrations WILL NOT be accepted"
   mail_form:
     #context: This key is used as a label for contact form attributes
     attributes:
       contact_form:
+        inquiry: "Which of the following best describes your inquiry?"
+        competition_id: "Competition"
         name: "Name"
         your_email: "Your email"
       website_contact:
@@ -428,11 +550,26 @@ en:
       wrong_size: "is the wrong size (should be %{file_size})"
       size_too_small: "is too small (should be at least %{file_size})"
       size_too_big: "is too big (should be at most %{file_size})"
-  #context: Overriden key for sign in
   devise:
+    #context: Overridden key for sign in
+    passwords:
+      edit:
+        new_password_confirmation: 'Re-enter new password'
+
+    sessions:
+      new:
+        sign_in: "Sign in"
+    shared:
+      links:
+        sign_in: "Sign in"
     failure:
       invalid: "Invalid email, WCA ID, or password."
       not_found_in_database: "Invalid email, WCA ID, or password."
+      unconfirmed: "You have to confirm your email address before continuing. Didn't receive a confirmation email? Go to https://www.worldcubeassociation.org/users/confirmation/new to request a new one."
+    #context: Overridden key for Devise reconfirmation email subject
+    mailer:
+      confirmation_instructions:
+        subject: "Please confirm your new email address"
   #context: Key used in external code that the WCA use
   wca:
     # These are locales used in WCA's app relevant to external gems, but which are not present in the gem's default locale file.
@@ -447,7 +584,8 @@ en:
     doorkeeper:
       applications:
         help:
-          scopes_html: 'Separate scopes with spaces. Leave blank to use the default scope(s). See <a href="https://github.com/thewca/worldcubeassociation.org/blob/master/WcaOnRails/config/initializers/doorkeeper.rb#L2-L9" target="_blank">here</a> for a list of supported scopes.'
+          https_info: 'HTTPS is required unless the host is "localhost"'
+          scopes_html: 'Separate scopes with spaces. Leave blank to use the default scope(s). See <a href="https://github.com/thewca/worldcubeassociation.org/blob/master/WcaOnRails/config/initializers/doorkeeper.rb#L4-L10" target="_blank">here</a> for a list of supported scopes.'
       #context: and asking the user "The application will be able to"
       scopes:
         public: 'Access your public data (name, WCA ID, gender, citizenship, and profile picture)'
@@ -463,18 +601,16 @@ en:
       let_us_know: "Please let us know if you have competed in a WCA competition before."
       welcome_back: "Welcome back! To create your WCA website account, we need to know the WCA ID under which you competed."
       welcome: "Welcome! Before you can compete in your first WCA competition, we need some additional information for records keeping purposes. Please note that your birthdate will never be released without your permission."
-      gender:
-        male: "Male"
-        female: "Female"
-        other_gender: "Other"
   layouts:
     #context: This key belongs to the navigation bar
     navigation:
       information: "Information"
       about: "About the WCA"
+      documents: "WCA Documents"
       delegates: "WCA Delegates"
       organizations: "Regional Organizations"
       faq: "Frequently Asked Questions"
+      tutorial: "Competition Tutorial"
       contact: "Contact Information"
       tools: "Tools"
       logo: "Logo"
@@ -491,6 +627,7 @@ en:
       multimedia: "Multimedia"
       db_export: "Database Export"
       regulations: "Regulations"
+      about_regulations: "About the Regulations"
       guidelines: "Guidelines"
       scrambles: "Scrambles"
       history: "History"
@@ -517,6 +654,41 @@ en:
       success: "Updated locale."
       failure: "Unable to update your profile."
       unavailable: "Requested locale is not available."
+    #context: user receiving mails
+    mailer:
+      #context: user creating new account and receiving confirmation mail
+      create_new_account:
+        header: "Confirmation instructions"
+        welcome: "Welcome %{user_email}!"
+        confirm: "Your account is created and must be activated before you can use it. Please confirm your account through the link below: "
+        confirmation_link: "Confirm my account."
+        activate: "After activation you may log in to the website of the World Cube Association: "
+        addendum: "This email is generated automatically. If you didn't register an account on the website of the World Cube Association and received this message by mistake, please ignore and delete it."
+        questions: "Do you have more questions? We will be happy to answer them! Feel free to send a mail to %{contact_link}."
+      #context: user changing mail address and receiving reconfirmation mail
+      reconfirmation_mail:
+        welcome: "Hello %{user_email}!"
+        confirm: "You can confirm your new account email address through the link below:"
+        confirmation_link: "Confirm mail address."
+      #context: notification to organizer that delegate submitted competition to the WCAT
+      competition_submission_email:
+        header: "%{delegate_name} confirmed %{competition}"
+        organizers: "Dear organizers of %{competition},"
+        confirmed: "Your competition Delegate %{delegate_name} confirmed %{competition} and sent the submission to the WCAT. As soon as the WCAT announces this competition to the public, you will receive another notification."
+        contact: "If you have more questions, please get in contact with the competition Delegate(s) via email: "
+      #context: notification to organizers after the WCAT announced their competition
+      competition_announcement_email:
+        header: "The WCAT announced %{competition}"
+        announced: "The WCAT approved your competition and officially announced it to the public."
+        link: "Please follow the link to get to the competition announcement: "
+      #context: notification to users after they were added to a competition as organizers
+      organizer_addition_email:
+        header: "You were added to %{competition} as an organizer"
+        intro: "Hello %{name},"
+        information: "%{confirmer} added you to %{competition} as an organizer. You can edit this competition here:"
+      organizer_removal_email:
+        header: "You were removed from %{competition} as an organizer"
+        information: "%{remover} removed you from %{competition} as an organizer."
     #context: related to claiming a WCA ID
     claim_wca_id:
       title: "Claim WCA ID"
@@ -545,7 +717,7 @@ en:
       pending_mail_confirmation: "This account is pending confirmation of new email address %{email}."
       pending_avatar_confirmation: "This account is pending confirmation of a new avatar."
       pending_claim_confirmation_html: "This account is waiting for %{delegate} to confirm their claimed WCA ID %{wca_id}."
-      pending_claim_mail_confirmation_html: "This user has claimed WCA ID %{wca_id}. Their delegate %{delegate} will be notified of this request as soon as this account's email address is confirmed."
+      pending_claim_mail_confirmation_html: "This user has claimed WCA ID %{wca_id}. Their Delegate %{delegate} will be notified of this request as soon as this account's email address is confirmed."
       your_thumbnail: "Your account thumbnail:"
       edit_thumbnail: "Click to edit thumbnail"
       manage_pending: "Manage pending avatars"
@@ -553,7 +725,7 @@ en:
       have_wca_id_html: "Your WCA ID is %{link_id}."
       #context: used in the error message when a user can't edit some part of their profile
       cannot_edit:
-        msg: "You cannot change your name, birthdate, gender, or country. Reason: %{reason}. Contact your <a href='%{delegate_url}'>delegate</a> if you need to change any of these."
+        msg: "You cannot change your name, birthdate, gender, or country. Reason: %{reason}. Contact your <a href='%{delegate_url}'>Delegate</a> if you need to change any of these."
         reason:
           assigned: "you have a WCA ID assigned"
           registered: "you have registered for a competition"
@@ -570,23 +742,31 @@ en:
         '4': "Your head, but not necessarily the full face, should be visible."
         '5': "The avatar must not include texts other than regular background texts."
         '6': "The avatar must be submitted in correct orientation."
+        '7': "The avatar must not contain offensive content (e.g. offensive gestures)."
+      delegate_avatar_guidelines:
+        title: "Additional guidelines for Delegates:"
+        paragraphs:
+          '1': "The avatar must be of your current self, depicted in the same fashion as how you would appear at a competition as the WCA Delegate."
+          '2': "The avatar must be framed, cropped, angled, and lit, so that any competitor or spectator at a competition can use it to unambiguously identify you at a competition venue."
+          '3': "The thumbnail of the avatar is only a section of the avatar, and it will be used to represent your full avatar. The thumbnail must be adjusted, so you can be recognized from it alone, and it must contain your face."
 
     #context: when an error occured during the edition
     errors:
       not_found: "not found"
       already_assigned: "already assigned to a different user"
       dob_incorrect_html: "does not match our database. If you're sure you're providing the correct date in the correct format (YYYY-MM-DD) please contact with WCA Results Team using <a href=\"%{dob_form_path}\">this dedicated form</a>."
-      unique: "must be unique"
+      unique: "is already used by \"%{used_name}\" with %{used_email}"
       dob_past: "must be in the past"
-      must_be_senior: "must be a senior delegate"
+      already_represented_country: "Cannot change the country to a country the person has already represented in the past."
+      must_have_a_change: "The name or the country must be different to update the person."
+      must_be_senior: "must be a Senior Delegate"
       must_not_be_present: "must not be present"
-      senior_has_delegate: "cannot demote senior delegate with subordinate delegates"
+      senior_has_delegate: "cannot demote Senior Delegate with subordinate Delegates"
       already_have_id: "cannot claim a WCA ID because you already have WCA ID %{wca_id}"
-      wca_id_no_birthdate_html: "We do not have a birthdate recorded for this WCA ID. Please contact with WCA Results Team using <a href=\"%{dob_form_path}\">this dedicated form</a>."
+      wca_id_no_birthdate_html: "We do not have a birthdate recorded for this WCA ID. Please contact the WCA Results Team using <a href=\"%{dob_form_path}\">this dedicated form</a>."
       wca_id_no_gender_html: "We do not have a gender recorded for this WCA ID. Please email the <a href='mailto:results@worldcubeassociation.org' target='_blank'>WCA Results Team</a> to resolve this."
       wca_id_no_citizenship_html: "We do not have a citizenship recorded for this WCA ID. Please email the <a href='mailto:results@worldcubeassociation.org' target='_blank'>WCA Results Team</a> to resolve this."
       wca_id_no_name_html: "We do not have a name recorded for this WCA ID. Please email the <a href='mailto:results@worldcubeassociation.org' target='_blank'>WCA Results Team</a> to resolve this."
-      board_member_cannot_resign: "You cannot resign from your role as a board member! Find another board member to fire you."
       avatar_requires_wca_id: "requires a WCA ID to be assigned"
     #context: when an action was successful
     successes:
@@ -595,8 +775,8 @@ en:
         wca_id_claimed: "Successfully claimed WCA ID %{wca_id}. Check your email, and wait for %{user} to approve it!"
         account_updated_confirm: "Account updated, emailed %{email} to confirm your new email address."
     select_nearby_delegate:
-      select_delegate_html: "In order to assign you your WCA ID, we need a <a href='%{link_delegate}' target='_blank'>WCA delegate</a> to confirm your identify. Please enter your birthdate and select the delegate you think knows you best."
-      already_assigned_html: "WCA ID %{link_id} is already assigned to a different account. If you believe this was done in error, contact your local <a href='%{link_delegate}' target='_blank'>WCA delegate</a>."
+      select_delegate_html: "In order to assign you your WCA ID, we need a <a href='%{link_delegate}' target='_blank'>WCA Delegate</a> to confirm your identify. Please enter your birthdate and select the Delegate you think knows you best."
+      already_assigned_html: "WCA ID %{link_id} is already assigned to a different account. If you believe this was done in error, contact your local <a href='%{link_delegate}' target='_blank'>WCA Delegate</a>."
       missing_dob_html: "WCA ID %{link_id} does not have a birthdate assigned."
       contact_results_team_html: "Please contact the <a href='mailto:results@worldcubeassociation.org' target='_blank'>WCA Results Team</a> to resolve this."
       unknown_wca_id_html: "WCA ID %{link_id} does not exist."
@@ -652,13 +832,18 @@ en:
       #context: for a new registration
       new:
         #context: "comp_name" contains the competition's name
-        mail_subject: "You have registered for %{comp_name}"
+        mail_subject: "Your registration for %{comp_name} is submitted and pending approval"
         #context: "comp_name" contains the competition's name
         registered_html: "You just registered for %{comp_name}."
-        #context: "n_total" will be replaced by the total number of registrations on waiting list, and "people" by the pluralization of "person" in your language (key registrations.registration_info_people.person)
-        on_waiting_list: "Your registration is on the waiting list, which currently has %{n_total} %{people} on it."
+        awaits_approval: "Your registration has been received and is pending approval from the organization team."
         #context: "here" is replaced by a link to view the registration
-        approval_info_html: "You will be emailed when your registration is approved. Please note that registrations are not automatically approved. To see the approval criteria visit the competition website or contact the organizers. You can also check the status of your registration %{here}."
+        approval_info_html: >-
+          You will be emailed when your registration is approved.
+          Please note that registrations are not automatically approved,
+          so be patient if you have not been accepted straight away.
+          There may be more registration steps to follow before your registration will be approved.
+          To see the approval criteria visit the competition website or contact the organizers.
+          You can also check the status of your registration %{here}.
       #context: when registration is accepted
       accepted:
         #context: "comp_name" contains the competition's name
@@ -686,7 +871,7 @@ en:
         #context: this key is one of the reasons explaining why a registration could be deleted
         causes:
           missing_info: "You did not submit all the required details"
-          incomplete: "You didn't meet the registration criteria (for example, paying the registration fee in advance)"
+          incomplete: "You didn't meet the registration criteria (for example, paying the registration fee in advance or meeting the qualifying times for events)"
           registrations_full: "The competitor limit has been reached and there are no more spots available"
           multiple_registrations: "You registered twice or more times"
     #context: on the registrations list
@@ -720,6 +905,7 @@ en:
     panel_title: "Registration details"
     register: "Register!"
     refund: "Refund Payment"
+    refund_confirmation: "Are you sure you want to refund this payment?"
     update: "Update Registration"
     delete: "Delete"
     delete_confirm: "Are you sure you want to delete your registration?"
@@ -732,22 +918,28 @@ en:
     please_sign_in_html: "%{sign_in} to register for %{comp}. If you do not yet have a WCA account, you can create one %{here}."
     greeting: "Hi, %{name}!"
     please_fix_profile_html: "In order to register for this %{comp}, you must fix the following problems with your %{profile}:"
+    registration_full: "The competitor limit for this competition is %{competitor_limit} and it has already been reached. If you register, your registration will be placed on a waiting list. It may not be approved unless a spot frees up."
     can_register: "You can register for %{comp} below."
     check_registration_information: "Please check the information about registration to find out if you need to do something else, like paying a registration fee."
     have_registered: "You have submitted your registration for %{comp}. You can see your registration details below."
     contact_organizer: "Contact the organizer if you wish to make a change."
     waiting_list: "Your registration is pending. For approval, you may need to pay a registration fee. Check the competition website for details."
     accepted: "Your registration has been accepted!"
-    entry_fees_fully_paid: "You have paid %{paid}, which fully covers the entry fees."
+    entry_fees_fully_paid: "You have paid %{paid}, which fully covers the registration fees."
     will_pay_here: "You will pay them here after submitting your registration"
     wont_pay_here: "Please check competition's information for instruction about how to pay"
+    refund_form:
+      hints:
+        refund_amount: "The amount to refund to the competitor, can be any value up to the amount already paid."
+      labels:
+        refund_amount: "Refund Amount"
     #context: on the payment form, when registering to a competition
     payment_form:
       title: "Registration fees"
       hints:
         donation: "Optional donation that will go only to the organization team"
       labels:
-        entry_fees: "Entry fees"
+        entry_fees: "Registration fees"
         donation: "Donation"
       alerts:
         not_a_number: "Please enter a valid amount."
@@ -755,6 +947,7 @@ en:
     payment_button_text: "Pay your fees with card"
     preferred_events_prompt_html: "To speed up registration in the future, you can set your preferred events %{link}."
     preferred_events_populated_html: "We autopopulated this with your preferred events, which you can edit %{link}."
+    registration_requirements: "Registration requirements for the competition:"
   #context: Key used when managing competitions
   competitions:
     #context: generic message
@@ -796,9 +989,35 @@ en:
         one: "WCA Delegate"
         other: "WCA Delegates"
       contact: "Contact"
-      competitor_limit: "Competitor Limit"
-      entry_fee: "Entry Fee"
       information: "Information"
+      events: "Events"
+      registration_requirements: "Registration requirements"
+      create_wca_account_html: "Create a WCA account %{here} if you don't have one."
+      claim_wca_id_html: "If this is not your first competition, associate your WCA ID to your WCA account %{here}."
+      register_link_html: "Register for this competition %{here}."
+      register_below_html: "Register for this competition below."
+      competitor_limit_is: "There is a competitor limit of %{competitor_limit} competitors."
+      no_competitor_limit: "There is no competitor limit."
+      entry_fee_is: "The base registration fee for this competition is %{base_entry_fee}."
+      no_entry_fee: "Registering for this competition is free."
+      use_stripe_link_html: "The registration fee has to be paid through Stripe %{here} once registered."
+      use_stripe_below_html: "The registration fee has to be paid through Stripe below once registered."
+      refund_policy_html: "If your registration is cancelled before %{limit_date_and_time} you will be refunded a %{refund_policy_percent} of your registration fee."
+      no_refunds: "Registration fees won't be refunded under any circumstance."
+      on_the_spot_registration: "On the spot registrations will be accepted with a base registration fee of %{on_the_spot_base_entry_fee}."
+      on_the_spot_registration_free: "On the spot registrations will be accepted for free."
+      no_on_the_spot_registration: "No on the spot registrations will be accepted."
+      guests_pay: "Spectators can attend paying an entry fee of %{guests_base_fee}."
+      guests_free: "Spectators can attend for free."
+      #context: The 'link_here' variable is replaced by a link to show the requirements, with the text "here"
+      click_to_display_requirements_html: "This competition is over, click %{link_here} to display the registration requirements it used."
+      hide_requirements: "Hide registration requirements."
+      #context: when displaying the registration opening/closing date
+      registration_period:
+        label: "Registration period"
+        range_future_html: "Online registration will be open from %{start_date_and_time} to %{end_date_and_time}."
+        range_ongoing_html: "Online registration opened %{start_date_and_time} and will close %{end_date_and_time}."
+        range_past_html: "Online registration opened %{start_date_and_time} and closed %{end_date_and_time}."
     #context: on the competition's index page
     index:
       title: "Competitions"
@@ -856,25 +1075,26 @@ en:
       no_past_competitions: "You have no past competitions."
     #context: in the competition edition form
     competition_form:
-      board: "Board"
+      wcat: "WCA Competition Announcement Team"
       supports_md_html: "Supports <a href='https://daringfireball.net/projects/markdown/basics' target='_blank'>Markdown</a>"
+      name_reason_html: "A brief explanation of the competition name. The name must comply with the <a href='/documents/policies/Competition%20Name.pdf'>WCA Competition Name Policy</a>."
       venue_html: "The venue where the competition takes place. %{md}. For example: [Cité des Sciences et de l'Industrie](http://www.cite-sciences.fr)"
       venue_details_html: "Details about the venue (e.g., On the first floor far in the back, follow the signs). %{md}"
       contact_html: "Optional contact information. If you do not fill this in, organizer emails will be shown to the public. %{md}. Example: [Text to display](mailto:some@email.com)"
       events: "Events"
-      unoff_events: "Events that are no longer official"
-      locked_edit_html: "This competition is publicly visible and locked for editing. If you need to make a change, contact the %{board}."
-      confirmed_not_visible_html: "You've confirmed this competition, but it is not yet visible to the public. Wait for the %{board} to make it visible."
+      deprecated_events: "This competition has events that are no longer official, we do not support editing them."
+      public_and_locked_html: "This competition is publicly visible and locked for editing. If you need to make a change, please reply to the email thread where the competition was confirmed."
+      confirmed_but_not_visible_html: "You've confirmed this competition, but it is not yet visible to the public. Wait for the %{contact} to make it visible."
       is_visible: "This competition is publicly visible, any changes you make will show up to the public!"
-      awaiting_confirmation_html: "Fill in all the fields and click Confirm when you're ready for the %{board} to approve this competition."
-      submit_modify_value: "Modify Events"
+      pending_confirmation_html: "Fill in all the fields and click Confirm when you're ready for the %{contact} to approve this competition."
       submit_create_value: "Create Competition"
       submit_update_value: "Update Competition"
       submit_confirm_value: "Confirm"
       submit_delete_value: "Delete"
-      submit_confirm: "Are you sure you're ready to confirm? After confirming, you won't be able to modify any information. Check your email after this to verify that the Board was notified."
+      submit_confirm: "Are you sure you're ready to confirm? After confirming, you won't be able to modify any information. Check your email after this to verify that the WCA Competition Announcement Team was notified."
       submit_delete: "Are you sure you want to delete this competition? There is no going back."
       coordinates: "Coordinates"
+      add_championship: "Add Championship"
     #context: and when an error occured
     errors:
       invalid_name_message: "must end with a year and must contain only alphanumeric characters, dashes(-), ampersands(&), periods(.), colons(:), apostrophes('), and spaces( )"
@@ -882,10 +1102,11 @@ en:
       cannot_delete_public: "Cannot delete a competition that is publicly visible."
       cannot_delete_confirmed: "Cannot delete a confirmed competition."
       must_contain_event: "must contain at least one event for this competition"
-      must_contain_delegate: "must contain at least one WCA delegate"
-      not_all_delegates: "are not all delegates"
+      must_contain_delegate: "must contain at least one WCA Delegate"
+      not_all_delegates: "are not all Delegates"
       registration_close_after_open: "registration close must be after registration open"
       end_date_before_start: "End date cannot be before start date."
+      refund_date_after_start: "Refund limit date cannot be after start date."
       span_too_many_days: "Competition cannot last more than %{max_days} days."
       invalid_currency_code: "Selected currency code is invalid"
     new:
@@ -895,7 +1116,7 @@ en:
       update_success: "Successfully updated the competition events."
     update:
       save_success: "Successfully saved competition."
-      confirm_success: "Successfully confirmed competition. Check your email, and wait for the Board to announce it!"
+      confirm_success: "Successfully confirmed competition. Check your email, and wait for the WCAT to announce it!"
       delete_success: "Successfully deleted competition %{id}."
     time_until_competition:
       competition_in: "Competition is in %{n_days}."
@@ -922,11 +1143,55 @@ en:
       distance: "Distance"
       before: "before"
       after: "after"
+      limit: "Limit"
+      competitors: "Competitors"
     announcements: "Announcements"
     upload_results: "Upload results"
     post_announcement: "Post competition announcement"
     show:
       general_info: "General info"
+      events: "Events"
+      schedule: "Schedule"
+    #context: on the events page
+    events:
+      #context: explanation of what time limit, cutoff, and format are
+      time_limit_information:
+        time_limit_html: "If you reach the time limit during your solve, the judge will stop you and your result will be DNF (see %{regulation_link})."
+        #context: as used in "please see Regulation A1a4"
+        regulation_link_text: "Regulation %{number}"
+        #context: as used in "please see Guideline A1a2++"
+        guideline_link_text: "Guideline %{number}"
+        #context: used in the sentence "a cumulative time limit may be enforced [...]"
+        cumulative_time_limit: "cumulative time limit"
+        cumulative_one_round_html: "A %{cumulative_time_limit} may be enforced (see %{regulation_link})."
+        cumulative_across_rounds_html: "A %{cumulative_time_limit} may be enforced across rounds (see %{guideline_link})."
+        cutoff_html: "The result to beat to proceed to the second phase of a combined round (see %{regulation_link})."
+        format_html: "The format describes how to determine the ranking of competitors based on their results. The list of allowed formats per event is described in %{link_to_9b}. See %{link_to_9f} for a description of each format."
+      format: "Format"
+      time_limit: "Time limit"
+      cutoff: "Cutoff"
+      proceed: "Proceed"
+    #context: competition's schedule tab
+    schedule:
+      #context: when selecting the kind of schedule to display
+      display_as:
+        label: "Display the schedule as:"
+        table: "Table"
+        calendar: "Calendar"
+      #context: when selecting the rooms to display on the schedule
+      display_for_room: "Display schedule for:"
+      #context: when talking about a time frame, like "From 8:00 To 12:00"
+      range:
+        from: "From"
+        to: "To"
+      start: "Start"
+      end: "End"
+      activity: "Activity"
+      room: "Room"
+      venue_information_html: "You are viewing the schedule for the venue %{venue_name}."
+      timezone_message: "The schedule is displayed in the timezone %{timezone}."
+      multiple_venues_available: "This competition has multiple venues, make sure to check out the schedule for the other venues as well!"
+      schedule_for_date: "Schedule for %{day_name} (%{full_date})"
     #context: entry of the left navigation menu
     nav:
       menu:
@@ -939,9 +1204,11 @@ en:
         clone: "Clone"
         orga_view: "Organizer view"
         event_view: "Manage events"
+        schedule_view: "Manage schedule"
         payment_view: "Setup payments"
         admin_view: "Admin view"
         tabs: "Manage tabs"
+        submit_results: "Submit results"
         delegate_report: "Delegate report"
         registration: "Registration"
         register: "Register"
@@ -986,7 +1253,6 @@ en:
     #context: Person profile page
     show:
       previously: "Previously"
-      in_memoriam: "In Memoriam"
       completed_solves: "Completed Solves"
       personal_records: "Current Personal Records"
       odd_rank_reason: >-
@@ -994,7 +1260,11 @@ en:
         is due to a change of country. Results from the previous region
         are not taken into account in the current region ranking.
       championship_podiums: "Championship Podiums"
-      wc_podiums: "World Championship Podiums"
+      championship_podium_levels:
+        world: "World Championship Podiums"
+        continental: "Continental Championship Podiums"
+        national: "National Championship Podiums"
+        greater_china: "Greater China Championship Podiums"
       place: "Place"
       medal_collection: "Medal Collection"
       record_collection: "Record Collection"
@@ -1016,7 +1286,13 @@ en:
   contacts:
     website:
       title: "WCA Website Contact Form"
-      description_html: "Use this form for website questions, comments, and suggestions only. <a href=\"%{contact_path}\">Other inquiries</a> should be sent to the appropriate party."
+      inquiries:
+        competition: "Contact the Organizers of a Specific Competition (please select below)"
+        competitions_in_general: "Competitions in General (organizing, competition rules, etc.)"
+        wca_id_or_profile: "WCA ID or WCA Profile"
+        media: "Media"
+        software: "Software"
+        different: "Other"
       submit: "Send message"
     dob:
       title: "Birthdate Change Request Form"
@@ -1058,7 +1334,6 @@ en:
         #context: Answer to "What are the requirements for attending a WCA competitions? ..."
         content:
           '1': "In general, there are not many requirements for a person to participate at a WCA competition. However, all participants of a competition are expected to have a good understanding of the <a href='https://www.worldcubeassociation.org/regulations/'>WCA Regulations</a>. If English is not your first language and you have trouble understanding the document, please read the <a href='https://www.worldcubeassociation.org/regulations/translations/'>Translations</a>."
-          '2': "In addition, we would recommend having a look at <a target='_blank' href='http://www.cubingusa.com/ctutorial.php'>Cubing USA's competitor tutorial</a>, which gives several nice hints for newcomers."
       '5':
         title: "How can I have a WCA Competition in my hometown?"
         #context: Paragraph of the answer to "How can I have a WCA competition in my hometown?"
@@ -1066,7 +1341,7 @@ en:
           '1': "If you are interested in organizing a competition, it's highly recommended to attend at least one or two competitions as a competitor to learn from the experience."
           '2': "WCA Competitions must follow the <a target='_blank' href='https://www.worldcubeassociation.org/regulations/'>WCA Regulations</a>. The organization team doesn't have to know the regulations by heart, however, a deep knowledge of the basics of the regulations would definitely help in correctly organizing the competition."
           '3': "After that, the organization team must contact a nearby <a target='_blank' href='https://www.worldcubeassociation.org/delegates'>WCA Delegate</a>. The supervision of a WCA Delegate is required in order to make a competition officially sanctioned by the WCA. The WCA Delegate will help guide the organization on how to host a successful competition."
-          '4': "Visit <a target='_blank' href='https://www.cubingusa.com/cguide.php'>this guide</a> for further information. (Any conflict between the information presented in this supplementary resource and the WCA Regulations is superseded by the WCA Regulations.)"
+          '4': "Visit the <a target='_blank' href='https://www.worldcubeassociation.org/organizer-guidelines'>WCA Competition Organizer Guidelines</a> for further information."
       '6':
         title: "What are the WCA accounts for? What is the difference between WCA accounts and WCA profiles?"
         #context: Paragraph of the answer to "What are the WCA accounts for? ..."
@@ -1080,7 +1355,7 @@ en:
         #context: Paragraph of the answer to "When are the results of a WCA competition uploaded?"
         content:
           '1': "After a competition has ended, the WCA Delegate has to double-check all score sheets and person data to eliminate possible errors. Once this is done, the results are sent to the WCA Results Team (WRT), which is responsible for uploading competition results and maintaining the WCA database. The WRT finally uploads the results to the WCA database as soon as possible."
-          '2': "Depending on the size of the competition and the delegate's personal schedule, all this can take only a day or up to a week. Please be patient."
+          '2': "Depending on the size of the competition and the Delegate's personal schedule, all this can take only a day or up to a week. Please be patient."
           '3': "Additionally, if you have connected your WCA account with your WCA ID (see below), you can enable email notifications about your results submission <a href='%{preferences_edit_path}'>here</a>."
       '7':
         title: "How do I change my profile picture?"
@@ -1123,16 +1398,16 @@ en:
   about:
     title: "About the WCA"
     mission:
-      title: "Mission"
       paragraphs:
-        '1': "The World Cube Association governs competitions for all puzzles labelled as Rubik puzzles, and all other puzzles that are played by twisting the sides, so-called 'twisty puzzles'. Most famous of these puzzles is the Rubik's Cube, invented by professor Rubik from Hungary. A selection of these puzzles are chosen as official events of the WCA."
+        '1': "The World Cube Association governs competitions for mechanical puzzles that are operated by twisting groups of pieces, commonly known as 'twisty puzzles'. The most famous of these puzzles is the Rubik's Cube, invented by professor Rubik from Hungary. A selection of these puzzles are chosen as official events of the WCA."
         '2': "The World Cube Association organizes competitions all over the world, supported by regional organizations responsible for organizing competitions in their countries."
-        '3': "The goal of the World Cube Association is to have<br /><strong>more competitions in more countries with more people and more fun, under fair and equal conditions.</strong>"
-        '4': "The spirit of the World Cube Association is that<br />
-             <strong>people from all over the world have fun together in a friendly atmosphere, help each other and behave sportsmanlike.</strong>"
+        '3': "The Mission of the World Cube Association is to have <strong>more competitions in more countries with more people and more fun, under fair and equal conditions</strong>."
+        '4': "The Spirit of the World Cube Association is that <strong>people from all over the world have fun together in a friendly atmosphere, help each other and behave sportsmanlike.</strong>"
     structure:
       title: "Structure"
-      board_html: "The World Cube Association is led by the <strong>WCA Board</strong>, consisting of the following members:"
+      board:
+        name: "WCA Board of Directors"
+        info_html: "The World Cube Association is led by the <strong>WCA Board</strong>, consisting of the following members:"
       committees: "The following committees are responsible for the operational activities of the WCA:"
       #context: WDC
       wdc:
@@ -1154,13 +1429,46 @@ en:
       wct:
         name: "WCA Communication Team"
         description: "The WCA Communication Team (WCT) has the role to oversee and support communications of the WCA with the Community and the general public. The communication of the WCA should contribute to the Objectives of the WCA and support a general positive culture of friendliness, transparency, inclusiveness, openness, and responsiveness."
-      delegates_html: "<strong>WCA Delegates</strong> are members of the WCA who are responsible for making sure that all WCA competitions are run according to the mission, regulations and spirit of the WCA. The WCA distinguishes between <strong>WCA Senior Delegates</strong>, <strong>WCA Delegates</strong> and <strong>WCA Candidate Delegates</strong>%{see_link}. Additional to the duties of a WCA Delegate, a WCA Senior Delegate is responsible for managing the Delegates in their area and can also be contacted by the community for regional matters. New Delegates are at first listed as WCA Candidate Delegates and need to show that they are capable of managing competitions successfully before being listed as WCA Delegates."
+      #context: WFC
+      wfc:
+        name: "WCA Financial Committee"
+        description: "This team is responsible for managing the finances of the WCA"
+      #context: WEC
+      wec:
+        name: "WCA Ethics Committee"
+        description: "This committee's role is to ensure that all the procedures followed by the WCA Staff and External Staff abide by its Code of Ethics, and to perform independent investigations if the conduct of any of these members is not compliant with said Code of Ethics. Such investigations can be requested by any Registered Speedcubers, for whom the WEC is a confidant. This committee also functions as the board of appeal if anyone involved disagrees with a decision made by the WCA Disciplinary Committee."
+      #context: WQAC
+      wqac:
+        name: "WCA Quality Assurance Committee"
+        description: "This committee has the role to support and promote continuous quality improvement within the WCA, as well as worldwide application of quality standards to ensure consistent high quality of processes, WCA Staff, Regional Organizations, Competition Organizers, and Competition Staff."
+      #context: WCAT
+      wcat:
+        name: "WCA Competition Announcement Team"
+        description: "This committee has the role to approve and announce WCA Competitions and ensure such announcements adhere to WCA quality standards."
+      #context: WMT
+      wmt:
+        name: "WCA Marketing Team"
+        description: "This team is responsible for developing and managing the WCA Brand, seeking sponsorships, supporting the distribution of WCA Competition Gear, and marketing WCA Merchandise."
+      #context: Hidden team for list of banned competitors
+      banned:
+        name: "Banned Competitors"
+      delegates_html: "<p><strong>WCA Delegate</strong> is a role defined in the WCA Motions and depicted in the WCA Regulations. The primary duty of a Delegate is to oversee competitions on behalf of the WCA. A WCA Delegate is responsible for making sure that all WCA Competitions are run according to the Mission, Spirit, and Regulations of the WCA. The WCA distinguishes between <strong>WCA Senior Delegates</strong>, <strong>WCA Delegates</strong> and <strong>WCA Candidate Delegates</strong>%{see_link}.</p>
+<p>In addition to the duties of a WCA Delegate, a WCA Senior Delegate is responsible for managing the WCA Delegates in their area and can also be contacted by the community for regional matters.</p>
+<p>New Delegates are listed as WCA Candidate Delegates at first; afterwards they are requested to show proficiency managing WCA Competitions before being promoted to WCA Delegates.</p>"
       see_link_html: " (see %{link})"
       members_html: "All competitors automatically become <strong>members</strong> of the WCA in their first WCA competition."
+  documents:
+    title: "Documents"
+    #context: The letter from the US Internal Revenue Service confirming that we are exempt from federal income tax
+    determination_letter: "IRS Determination Letter"
+    bylaws: "Bylaws"
+    motions: "Motions"
+    minutes: "Minutes"
+    policies: "WCA Policies"
   #context: Delegates page
   delegates_page:
     title: "WCA Delegates"
-    acknowledges: "The WCA acknowledges the following members as delegates for official WCA competitions:"
+    acknowledges: "The WCA acknowledges the following WCA Delegates:"
     table:
       name: "Name"
       role: "Role"
@@ -1176,26 +1484,19 @@ en:
         wishing to form a regional organization are encouraged to contribute to
         the WCA in their area before submitting their application. For help
         organizing a WCA competition in your area, please contact your nearest
-        delegate.
+        Delegate.
     requirements:
       title: Requirements for WCA Regional Organizations
       list:
         '1': To actively organize or support WCA Competitions in the region of the organization
         '2': To actively contribute to the Continental WCA Competitions that are held in the continent of the Regional Organization
-        '3': To respect and operationalize the Objectives set out in the By-Laws and Regulations of the WCA
+        '3': To respect and operationalize the Objectives set out in the Bylaws and Regulations of the WCA
         '4': To comply with all applicable WCA Regulations
         '5': To accept and comply with decisions of WCA Officials
-        '6': To keep on file with the WCA a copy of its current by-laws and regulations in an electronic format
+        '6': To keep on file with the WCA a copy of its current Bylaws and regulations in an electronic format
     application_instructions:
       title: Application Instructions
-      description: To apply to become a Regional Organization we require the region to submit a written application to the WCA Board containing all of the details listed below.
-      list:
-        '1': Name of the Regional Organization
-        '2': Official address and contact details
-        '3': A copy of its current by-laws, which are in compliance with the By-Laws and Regulations of the WCA
-        '4': A list of its principal officers
-        '5': A clear description of the area that is being covered by the Regional Organization
-        '6': A report on past and current WCA related activities
+      description_html: Please fill out <a href='https://docs.google.com/forms/d/e/1FAIpQLSfX2HbafvMbWw-9DTgIP0Zf7im1VMZEaRq1J-jXnyW2nVYzsg/viewform'>this form</a>.
   #context: Contact page
   contact:
     title: "Contact Information"
@@ -1204,33 +1505,50 @@ en:
     #context: The %{link} variable links to the Delegates page
     questions_and_comments_html: "For website questions, comments, and suggestions, use this <a href='/contact/website'>contact form</a>. For inquiries concerning a specific area or competition, please contact your local %{link}."
     committees_and_teams_html: "<u>Committees and Teams</u>"
+    members: "Members"
     board:
-      name_html: "WCA Board"
-      info: "(WCA organization, delegate reports, competition approval, general inquiries)"
+      info_html: "The World Cube Association is led by the WCA Board. They are responsible for general inquiries and the WCA organization as a whole."
     wct:
-      info: "(communications of the WCA with the community and the general public)"
+      info_html: "The WCT is in charge of overseeing and supporting communications of the WCA with the community and general public. They should be contacted if you have general questions about the WCA or their social media appearance."
     wdc:
-      info: "(independent advice to WCA board, independent investigations, counselor for important personal matters)"
+      info_html: "The WDC investigates a variety of situations and proposes solutions, including punishments when necessary.  Among other topics, these situations could be serious violations of WCA Regulations or community issues. If you have experienced any of these, feel free to approach this committee."
     wrc:
-      info: "(maintenance of the WCA Regulations)"
+      info_html: "The WRC handles all issues which are related to the application, the improvement and the development of the WCA Regulations. They support WCA Delegates on any kind of procedural matters happening at competitions and decide on unresolved and uncovered incidents. The WRC regularly publishes WCA internal reports to help all WCA Delegates and improve their knowledge of the Regulations. If you would like to take part in regulation development or propose changes you can reach out to the WRC by contacting them via mail or discussions on <a href='https://github.com/thewca/wca-regulations'>GitHub</a>."
     wrt:
-      info: "(competition results, result corrections)"
+      info_html: "The WRT is responsible for managing all data in the databases of the WCA, most importantly competition results and person data. They are posting results of WCA competitions to the WCA website, once the WCA Delegate of the competition has sent them in. Apart from posting competition results, the WCA Results Team is also responsible for making corrections to competition results if necessary and they are in charge of administering all WCA profile pages. This includes for example changing user data, like dates of birth, according to verified requests and managing profile picture requests."
     wst:
-      info: "(maintenance of software of the WCA)"
+      info_html: "The WST is responsible for the maintenance and management of all software of the WCA. They also develop new software for various tasks within the WCA whenever needed. If you have suggestions and ideas for further website development or if you would like to report errors and bugs, feel free to contact them! The WCA website is a huge open source project on <a href='https://github.com/thewca/worldcubeassociation.org'>GitHub</a>, so if you are interested in helping to develop for the WCA, take a look there."
+    wfc:
+      info_html: "The WFC is responsible for everything regarding finances within the WCA. They manage the finances and accounts of the WCA in accordance with an approved annual budget proposal, which is also their work to provide on a regular basis."
+    wec:
+      info_html: "This committee has the role to ensure that all the procedures followed by the WCA Staff and External Staff abide by its Code of Ethics."
+    wqac:
+      info_html: "This committee has the role to support and promote continuous quality improvement within the WCA, as well as worldwide application of quality standards to ensure consistent high quality of processes, WCA Staff, Regional Organizations, Competition Organizers, and Competition Staff."
+    wcat:
+      info_html: "This committee has the role to approve and announce WCA Competitions and ensure such announcements adhere to WCA quality standards."
+    wmt:
+      info_html: "This team is responsible for developing and managing the WCA Brand, seeking sponsorships, supporting the distribution of WCA Competition Gear, and marketing WCA Merchandise."
   score_tools:
     title: "WCA Score Taking tools"
     paragraphs:
-      '1': 'WCA highly recommends the use of <a href="http://cubecomps.com">Cube Comps</a> before and during a competition. Cube Comps is an online system with live scoring and many interesting features, like scorecard printing and a very efficient multi-user data entry system. Created by Luis J. Iáñez and now under Open Source.'
+      '1': 'The WCA highly recommends the use of <a href="http://cubecomps.com">Cube Comps</a> before and during a competition. Cube Comps is an online system with live scoring and many interesting features, like score sheet printing and a very efficient multi-user data entry system. Created by Luis J. Iáñez and now under Open Source.'
       '2': "Score sheets and scrambles should be processed and checked for errors using the %{workbook_link} before sending them to the WCA Results Team."
       '3': 'The latest version of the WCA competition Score sheet can be downloaded here:<br /><a href="/files/results.xls" target="_blank">WCA competition Score sheet</a>.'
+      '4': >-
+        You may also want to use <a href="https://jonatanklosko.github.io/groupifier">Groupifier</a>
+        for preparing competitor groups for a competition. It's a tool that aims to do exactly this for you.
+        Among the main features you will find: sorting competitors by rankings,
+        assigning tasks (judging, scrambling), deciding how many scrambles are needed,
+        generating score sheets, personal sheets, and summaries.
+        It's an Open Source project created by Jonatan Kłosko.
+
   logo:
     title: 'WCA Logo'
     paragraphs:
-      '1': "The WCA logo was designed by Justin Eastman, in a design contest in January 2005.<br />We liked the logo because of its design, the colours, and the fact that it does not specifically show a Rubik's Cube / 3x3x3 cube."
+      '1': "The WCA logo was designed by Justin Eastman, in a design contest in January 2005.<br />We liked the logo because of its design, the colours, and the fact that it does not specifically show a 3x3x3 cube."
       '2': 'We have three different versions of the logo: a <a href="/files/WCAlogo_XL.jpg">large version</a> (46 KB, 1756 px by 1068 px), a <a href="/files/WCAlogo.svg">vector version</a> and a <a href="/files/WCAlogo_notext.svg">vector version without text</a>.'
       '3': '3D version of the logo, designed by Vu Minh Tan from Vietnam: <a href="/files/WCALogo3D.png">PNG version</a> (2.1 MB), a <a href="/files/WCALogo3Dsmall.png">small PNG version</a> (0.25 MB).'
-      '4': 'All WCA competition organizers may use the WCA logo for websites, clothing, gifts or decorations, only for official WCA competitions.<br />
-  For all other persons and purposes using the WCA logo requires an approval by <a href="mailto:board@worldcubeassociation.org">WCA board</a>.'
+      '4': 'Acceptable usage of the WCA logo is outlined by the WCA Logo Usage policy which appears on the <a href="/documents">WCA Documents page</a>.'
   workbook_assistant:
     title: "WCA Workbook Assistant"
     download: "Download WCA Workbook Assistant"
@@ -1283,3 +1601,134 @@ en:
         together_with: "Together with"
     messages:
       invalid_wca_ids: "Please provide two different valid WCA IDs."
+  search_results:
+    index:
+      competitions: "Competitions"
+      people: "People"
+      advanced_search: "Advanced search"
+      posts: "Posts"
+      regulations_and_guidelines: "Regulations and Guidelines"
+      #context: Used when there are no search results. E.g. "No people found for *Sherlock Holmes*".
+      not_found:
+        competitions: "No competitions found for"
+        people: "No people found for"
+        posts: "No posts found for"
+        regulations_and_guidelines: "No Regulations or Guidelines found for"
+  #context: Incident log
+  incidents_log:
+    #context: disclaimer displayed to inform incidents are only in English
+    i18n_disclaimer: "Please note the incidents section is only available in English, the content below is not translated."
+  #context: About the regulations
+  about_regulations:
+    title: "About the Regulations"
+    panel1:
+      title: "Regulations"
+      content1_html: 'All competitions must follow the <a href="/regulations/">WCA Regulations</a>. It is important for competitors to read these regulations before attending their first competition.'
+      content2_html: 'The WCA Regulations are supplemented by the <a href="/regulations/guidelines.html">WCA Guidelines</a>, which contain additional clarifications and explanations.'
+    panel2:
+      title: "Translations"
+      content1_html: 'The WCA Regulations are not only available in English, but WCA members have translated them into several languages: <a href="/regulations/translations/">Translations</a>.'
+      content2_html: '<strong>Important</strong>: Although the translations are very helpful, they are not official. In competitions, the English version of the WCA Regulations is binding.'
+    panel3:
+      title: "Regulations FAQ"
+      content1_html: 'The <a href="/faq">FAQ section</a> answers several frequently asked questions about the WCA Regulations.'
+    panel4:
+      title: "Organizer Guidelines"
+      content1_html: 'If you are interested in organizing a competition or already planning to organize one, please read our <a href="/organizer-guidelines">Organizer Guidelines</a>.'
+      content2_html: 'This document contains important information and should be read by every competition organizer.'
+  #context: Organizer Guidelines
+  organizer_guidelines:
+    title: "WCA Competition Organizer Guidelines"
+    paragraph1:
+      title: "How to organize a competition"
+      content: "All WCA competitions must be attended and overseen by a WCA Delegate. If you are interested in organizing your own competition, please contact your nearest WCA Delegate. They will be able to give you more information on the local practices and can
+      help you with finding a suitable date as they know if there are any other competitions planned in the same time frame. If there is no WCA Delegate near your area, please get in touch with the Senior Delegate for your region."
+    paragraph2:
+      title: "Expected expenses for organizing a competition"
+      content: "The expected expenses differ greatly from country to country and are determined by several factors like the size of the venue and other general conditions. Recouping all expenses with registration fees is possible. However, to keep these as low as possible,
+      it is highly recommended to search for sponsors. Although WCA Delegates are volunteers and do not receive a salary for their work, organizers should consider paying compensation for their travel expenses."
+    paragraph3:
+      title: "Deadlines for the announcement of the competition"
+      content_html: "The competition should be announced at least one month before the start of the competition (see <a href='https://www.worldcubeassociation.org/regulations/guidelines.html#8a4++'>Guideline 8a4++</a>). If there are special reasons preventing this deadline to be met, competitions may be announced up to two weeks before, at the discretion
+      of the WCAT. It is highly recommended to inform the WCAT of these reasons as soon as possible to avoid a later refusal of the competition."
+    paragraph4:
+      title: "Proximity policy"
+      content1: "WCA competitions will be accepted if they are at least 100 km or 19 days away from any other competition. The WCAT should particularly review a proposed competition if there is another competition for which the distance between them is less than 100 km and the time between them is less than 19 days. A Delegate requesting approval for such a competition must provide further information on why the competition should still be accepted. Possible arguments that support such a competition being accepted include:"
+      olist1:
+        '1': "The two competitions don't have events in common."
+        '2': "The two competitions take place in different countries."
+        '3': "In the last 12 months, there have been fewer than 16 competitions in the area 100 km around the competition."
+      content2: '"3x3x3 Fewest Moves simultaneous competitions" are WCA competitions having only the 3x3x3 Fewest Moves event and taking place simultaneously in different locations.'
+      olist2:
+        '1':
+          content1: "3x3x3 Fewest Moves simultaneous competitions cannot be part of any other regular competition."
+          alist1:
+            '1a': "Time frames when both are celebrated can’t overlap."
+        '2':
+          content1: "If any location of such competitions is closer than 100 km to any other regular competition, then"
+          alist1:
+            '2a': "both competitions should be at least 5 days apart, or"
+            '2b': "the other competition must not have the 3x3x3 Fewest Moves event."
+    paragraph-events:
+      title: "Announcing events"
+      content: 'All events that are going to be held at the competition must be specified by the Delegate when requesting the competition approval. This also includes "tentative" events (i.e. events that may be held additionally depending on the competition flow). Further additions must be approved by the WCAT.'
+    paragraph5:
+      title: "Competitor limits"
+      content_html: "The number of competitors may be limited per event or per competition (see <a href='https://www.worldcubeassociation.org/regulations/#Z4'>Regulation Z4</a>). Like for all regulations in article Z, the Delegate of the competition must get an approval of the competitor limit by the WCAT. Competitor limits should be
+        chosen wisely and in accordance with the expected competitor interest. The limit should not set to a lower number for minor reasons. The intended limit should already be taken into consideration when searching for a suitable venue. The competitors
+        limit must be clearly stated on the competition page on the WCA website."
+    paragraph6:
+      title: "Handling registrations"
+      content: "Registrations must be processed on a first come first served basis, which means that the earliest complete registration must be treated first. If registration fees are prepaid, a registration is considered complete when the registration fee has been paid. This
+      should be clearly stated in the paying instructions on the competition website."
+    paragraph7:
+      title: "Managing the waiting list"
+      content1: "Once the competitor limit for a competition is reached, a waiting list should be opened. When registered and approved competitors cancel their registration, they can be replaced with the next competitors on the waiting list."
+      content2: "If competition registration fees are prepaid, it is an efficient approach to offer the free spot to the next competitor on the waiting list and set a deadline until when the registration fee should be paid to complete the registration (e.g. 48 hours). In case the payment is not
+      received in time or the competitor denies, the free spot should be offered to the next person on the waiting list. This process should be continued until the free spots are filled. There are no exceptions for competitors to bypass the waiting list."
+      content3: "If competitors did not go through the regular registration process but competed, their results will be removed retroactively (assuming the competitors limit existed and was reached)."
+    paragraph8:
+      title: "Tasks before the competition"
+      list:
+        '1': "Before announcing the competition, a schedule is required to be published on the competition website. This schedule can be adjusted later."
+        '2': "Competitors should be split into groups, score sheets must be printed and should be split according to the groups' distribution. It is also recommended to plan who will scramble for every group of every event, at least for the first rounds.
+        Scramblers should be reliable."
+    paragraph9:
+      title: "Tasks during the competition"
+      content: "The tasks an organizer has to do during a competition should be discussed with the WCA Delegate. The typical tasks are (they can be delegated to other reliable people):"
+      list:
+        '1': "Managing the registration desk"
+        '2': "Making announcements"
+        '3': "Calling groups and laying out score sheets"
+        '4': "Score-taking and printing results"
+        '5': "Looking for scramblers and judges"
+        '6': "Dealing with all organizational issues regarding the venue (e.g. keys or WiFi)"
+  #context: Media pages
+  media:
+    common:
+      view_media_page: View all media
+      confirm_delete: Are you sure you want to delete this media?
+    new:
+      title: Submit Media
+      review_warning_html: All media will be reviewed before being listed on the <a href="/media">all media page</a>.
+      guidelines: "Guidelines"
+      media_guidelines:
+        '1': All media content must be related to the selected competition.
+        '2': All media content must be appropriate and clean and not contain any improper or offensive material.
+        '3': The media content must not have extensive presence of sponsors or ads.
+        '4': All media content must have appropriate and descriptive titles.
+    edit:
+      title: Edit Media
+      validate_media_page: View all pending media
+    index:
+      title: Media
+      validate_media: Validate media
+      submit_media_html: You can submit media <a href="/media/new">here</a>.
+    validate:
+      title: Validate Media
+    media_table:
+      year: Year
+      location: Country, City
+      accept: Accept
+      confirm_accept: Are you sure you want to accept this media?
+      edit: Edit

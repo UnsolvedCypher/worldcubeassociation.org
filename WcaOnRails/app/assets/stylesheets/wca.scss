@@ -275,30 +275,36 @@ table.wca-results {
   }
 }
 
-
-.f16.flag {
-  vertical-align: middle;
+.flag-icon {
+  box-shadow: 0 0 8px rgba($gray-darker, 0.3);
+  /* See the discussion here: https://github.com/thewca/worldcubeassociation.org/pull/2150#issuecomment-343270458 */
+  background-color: rgba($gray-darker, 0.2);
 
   // Set flag imitations for competitions taking place in multiple countries.
-  &.xe,
-  &.xa,
-  &.xs {
+  &.flag-icon-xe,
+  &.flag-icon-xa,
+  &.flag-icon-xs,
+  &.flag-icon-xm {
     background-image: none;
-    display: inline-block;
-    top: 1px;
-    width: 16px;
-    height: 12px;
     background-color: white;
     border-radius: 2px;
+    /* The library uses line-height: 1em, but this doesn't fit the situation
+       as we want the horizontal borders to be counted into the height.
+       So for these particular flags we set the height property. */
+    height: 1em;
   }
-  &.xe {
+  &.flag-icon-xe {
     border: 1px solid $blue;
   }
-  &.xa {
+  &.flag-icon-xa {
     border: 1px solid yellow;
   }
-  &.xs {
+  &.flag-icon-xs {
     border: 1px solid red;
+  }
+  &.flag-icon-xm {
+    border: 1px solid;
+    border-image: linear-gradient(to right, red, blue) 1;
   }
 }
 
@@ -351,6 +357,18 @@ textarea {
   min-height: 50px;
 }
 
+/* In case of form errors, they contain links targetting the relevant form elements.
+   SimpleMDE sets `display: none` for textareas to show custom editor.
+   As the textareas are not displayed, there is no way to target them with such link.
+   To make it work, we force them to be rendered but still invisible. */
+.markdown-editor {
+  display: block !important; // scss-lint:disable ImportantRule
+  visibility: hidden;
+  height: 0 !important; // scss-lint:disable ImportantRule
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
 
 .bs-table-query-fields {
   margin: 15px 0;
@@ -359,4 +377,83 @@ textarea {
 a.plain {
   color: inherit;
   text-decoration: none;
+}
+
+// From http://stackoverflow.com/a/22892773
+.row.equal {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+// Modified from http://bootsnipp.com/snippets/featured/loading-button-effect-no-js
+button.saving {
+  @keyframes ld {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.1); }
+    100% { transform: rotate(360deg) scale(1); }
+  }
+
+  position: relative;
+  opacity: 0.8;
+
+  &:hover,
+  &:active,
+  &:focus {
+    cursor: default;
+    box-shadow: none;
+  }
+
+  &::before {
+    content: '';
+
+    display: inline-block;
+
+    position: absolute;
+    background: transparent;
+    border: 1px solid currentColor;
+    border-top-color: transparent;
+    border-bottom-color: transparent;
+    border-radius: 50%;
+
+    box-sizing: border-box;
+
+    top: 50%;
+    left: 50%;
+    margin-top: -12px;
+    margin-left: -12px;
+
+    width: 24px;
+    height: 24px;
+
+    animation: ld 1s ease-in-out infinite;
+  }
+}
+
+// Modified from https://stackoverflow.com/a/22920590
+.input-xs {
+  height: 22px;
+  padding: 2px 5px;
+  font-size: 12px;
+  line-height: 1.5; /* If Placeholder of the input is moved up, rem/modify this. */
+  border-radius: 3px;
+}
+
+select.input-xs {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.heading-as-link {
+  &:hover {
+    cursor: pointer;
+    .panel-info > & {
+      @extend a.list-group-item-info:hover;
+    }
+    .panel-warning > & {
+      @extend a.list-group-item-warning:hover;
+    }
+  }
+  a {
+    text-decoration: none;
+  }
 }

@@ -9,6 +9,20 @@ upstream app {
 <% end %>
 }
 
+<% if node.chef_environment != "production" %>
+  # Serve mailcatcher at https://staging.worldcubeassociation.org:444
+  server {
+    server_name staging.worldcubeassociation.org;
+
+    listen 444 ssl;
+    include wca_https.conf;
+
+    location / {
+      proxy_pass http://localhost:1080;
+    }
+  }
+<% end %>
+
 server {
   server_name <%= @server_name %> localhost;
 
@@ -131,6 +145,14 @@ server {
     }
 
     return 302 /competitions/$competitionId;
+  }
+
+  # Redirect old media pages
+  location /results/media_insertion.php {
+    return 302 /media/new;
+  }
+  location /results/media.php {
+    return 302 /media/;
   }
 
   location /results {

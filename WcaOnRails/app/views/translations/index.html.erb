@@ -2,10 +2,10 @@
 <div class="container">
   <h1><%= yield(:title) %></h1>
 
-  <% (I18n.available_locales - [:en]).each do |locale| %>
+  <% (I18n.available_locales - [:en]).sort.each do |locale| %>
     <%
       bad_keys_by_type = @bad_i18n_keys[locale]
-      bad_keys_for_locale = bad_keys_by_type.values.flatten
+      bad_keys_for_locale = bad_keys_by_type.values.flatten(1)
       class_heading = bad_keys_for_locale.empty? ? "" : "heading-as-link"
       class_panel = bad_keys_for_locale.empty? ? "success" : "warning"
     %>
@@ -14,7 +14,7 @@
       <div class="panel-heading <%= class_heading %>" data-toggle="collapse" data-target="#collapse-<%= locale %>">
         <h3 class="panel-title">
           <span class="label label-<%= class_panel %>">i18n</span>
-          <span class="label label-<%= class_panel %>"><%= flag_icon Locales::AVAILABLE[locale][:flag_id], 16 %> <%= locale %></span> <%# this is all on one line for a reason. See http://stackoverflow.com/a/25879479 %>
+          <span class="label label-<%= class_panel %>"><%= flag_icon Locales::AVAILABLE[locale][:flag_id] %> <%= locale %></span> <%# this is all on one line for a reason. See http://stackoverflow.com/a/25879479 %>
           <span class="badge"><%= bad_keys_for_locale.size %></span>
           <%= bad_keys_for_locale.empty? ? "All good" : "Needs attention" %>
           <% unless bad_keys_for_locale.empty? %>
@@ -37,7 +37,7 @@
                     <ul class="list-group row locale-list-keys">
                       <% bad_keys.each do |key| %>
                         <div class="col-md-6">
-                          <li class="list-group-item"><%= key %></li>
+                          <li class="list-group-item"><%= key.join(" > ") %></li>
                         </div>
                       <% end %>
                     </ul>
@@ -51,5 +51,5 @@
 
     </div>
   <% end %>
-  <%= link_to "Update Translation", translations_edit_path, class: "btn btn-default" %>
+  <%= link_to "Update Translation", translations_edit_path, class: "btn btn-info" %>
 </div>

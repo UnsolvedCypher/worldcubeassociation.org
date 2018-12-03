@@ -1,21 +1,24 @@
   <% provide(:include_gmaps, true) %>
-  <% is_actually_confirmed = @competition.persisted? ? Competition.find(@competition.id).isConfirmed? : false %>
-  <%= horizontal_simple_form_for @competition, html: { class: 'are-you-sure no-submit-on-enter', id: 'edit-competition-form' } do |f| %>
+  <% provide(:include_markdown_editor, true) %>
+  <% provide(:include_auto_numeric, true) %>
+  <% is_actually_confirmed = @competition.persisted? ? Competition.find(@competition.id).confirmed? : false %>
+  <%= horizontal_simple_form_for @competition, html: { class: 'are-you-sure no-submit-on-enter', id: 'competition-form' } do |f| %>
     <% if @competition.persisted? %>
       <% if @competition_admin_view %>
         <%= hidden_field_tag :competition_admin_view, "1" %>
 
-        <%= f.input :isConfirmed %>
+        <%= f.input :confirmed, as: :boolean %>
         <%= f.input :showAtAll %>
       <% else %>
+        <% mail_to_wcat = mail_to Team.wcat.email, t(".wcat"), target: "_blank" %>
         <%= if is_actually_confirmed && @competition.showAtAll?
-              alert :success, t('.locked_edit_html', board: mail_to_wca_board)
+              alert :success, t('.public_and_locked_html')
             elsif is_actually_confirmed && !@competition.showAtAll?
-              alert :warning, t('.confirmed_not_visible_html', board: mail_to_wca_board)
+              alert :warning, t('.confirmed_but_not_visible_html', contact: mail_to_wcat)
             elsif !is_actually_confirmed && @competition.showAtAll?
               alert :danger, t('.is_visible')
             elsif !is_actually_confirmed && !@competition.showAtAll?
-              alert :warning, t('.awaiting_confirmation_html', board: mail_to_wca_board)
+              alert :warning, t('.pending_confirmation_html', contact: mail_to_wcat)
             end %>
       <% end %>
     <% end %>
@@ -28,8 +31,9 @@
       <% if @competition.persisted? %>
         <%= f.input :cellName %>
       <% end %>
+      <%= f.input :name_reason, hint: t('.name_reason_html') %>
 
-      <%= f.input :countryId, collection: Country.all, label_method: lambda { |c| c.name }, value_method: lambda { |c| c.id }  %>
+      <%= f.input :countryId, collection: Country.all_sorted_by(I18n.locale), label_method: lambda { |c| c.name }, value_method: lambda { |c| c.id }  %>
       <%= f.input :cityName %>
       <%= f.input :venue, hint: t('.venue_html', md: t('.supports_md_html')) %>
       <%= f.input :venueDetails, hint: t('.venue_details_html', md: t('.supports_md_html')) %>
@@ -116,7 +120,7 @@
 
           wca.fetchNearbyCompetitions = function() {
             $("#nearby-competitions").addClass('loading');
-            var obj = $("#edit-competition-form").serializeJSON();
+            var obj = $("#competition-form").serializeJSON();
 
             wca.cancelPendingAjaxAndAjax('render_nearby_competitions', {
               url: '<%= nearby_competitions_path %>',
@@ -217,32 +221,36 @@
       <%= f.input :external_website %>
       <hr>
 
+      <div class="championships">
+        <%= f.simple_fields_for :championships, @competition.championships do |f2| %>
+          <%= render "championship_fields", f: f2 %>
+        <% end %>
+      </div>
+      <div class="row">
+        <div class="col-sm-offset-2 col-sm-9">
+          <%= link_to_add_association button_tag(icon("plus", t('.add_championship')), type: "button", class: "btn btn-default"), f, :championships,
+                                      data: { association_insertion_node: '.championships', association_insertion_method: 'append' } %>
+        </div>
+      </div>
+      <hr>
+      <%= f.input :use_wca_registration %>
     <% end %>
-    <% disable_money_input = !@competition.can_edit_registration_fees? %>
-    <%= f.input :currency_code, collection: Money::Currency.table.values, label_method: lambda { |c| c[:name]  }, value_method: lambda { |c| c[:iso_code] }, disabled: disable_money_input  %>
-    <%= f.input :base_entry_fee_lowest_denomination, as: :money_amount, currency: @competition.currency_code, disabled: disable_money_input %>
-    <script>
-      // Setup currency onchange callback
-      $('#competition_currency_code').change(function() {
-        wca.applyCurrencyMask('update',
-                              '#base_entry_fee_lowest_denomination_input_field',
-                              $('#competition_currency_code').val());
-      });
-    </script>
-
-    <%= f.input :use_wca_registration %>
 
     <div class="wca-registration-options">
-      <%= f.input :enable_donations %>
-
-      <%= f.input :guests_enabled, as: :radio_buttons, collection: [ :true, :false ] %>
-
       <% if @competition.can_receive_registration_emails?(current_user.id) %>
-        <%# Quick hack to fill receive_registration_emails with the correct
-            value for the current_user %>
+        <%# Quick hack to fill receive_registration_emails with the correct value for the current_user %>
         <% @competition.receive_registration_emails = @competition.receiving_registration_emails?(current_user.id) %>
         <%= f.input :receive_registration_emails, as: :boolean %>
       <% end %>
+    </div>
+
+    <% if @competition_admin_view || !is_actually_confirmed %>
+      <div class="wca-registration-options">
+        <%= f.input :enable_donations %>
+        <%= f.input :guests_enabled, as: :radio_buttons, collection: [ :true, :false ] %>
+      </div>
+
+      <%= f.input :guests_entry_fee_lowest_denomination, as: :money_amount, currency: @competition.currency_code, currency_selector: "#competition_currency_code" %>
 
       <div class="col-sm-offset-2 col-sm-9">
         <div class="row datetimerange">
@@ -250,24 +258,48 @@
           <%= f.input :registration_close, as: :datetime_picker, wrapper: :ranged_datetime %>
         </div>
       </div>
-    </div>
 
-    <% if @competition_admin_view || !is_actually_confirmed %>
-      <%= f.input :competitor_limit_enabled %>
+      <%= f.input :competitor_limit_enabled, collection: [ :true, :false ] %>
       <div class="wca-competitor-limit-options">
         <%= f.input :competitor_limit %>
         <%= f.input :competitor_limit_reason %>
       </div>
+
+      <% disable_money_input = !@competition.can_edit_registration_fees? %>
+      <%= f.input :currency_code, collection: Money::Currency.table.values, label_method: lambda { |c| c[:name]  }, value_method: lambda { |c| c[:iso_code] }, disabled: disable_money_input  %>
+      <%= f.input :base_entry_fee_lowest_denomination, as: :money_amount, currency: @competition.currency_code, disabled: disable_money_input, currency_selector: "#competition_currency_code" %>
+
+      <%= f.input :refund_policy_percent %>
+      <%= f.input :refund_policy_limit_date, as: :datetime_picker %>
+
+      <%= f.input :on_the_spot_registration, collection: [ :true, :false ] %>
+      <div class="wca-on-the-spot-registration-options">
+        <%= f.input :on_the_spot_entry_fee_lowest_denomination, as: :money_amount, currency: @competition.currency_code, currency_selector: "#competition_currency_code" %>
+      </div>
+
+      <%= f.input :extra_registration_requirements, input_html: { class: "markdown-editor" } %>
+
+      <hr>
+      <%= f.input :regulation_z1 %>
+      <div class="wca-regulation-z1-reason">
+        <%= f.input :regulation_z1_reason %>
+      </div>
+
+      <%= f.input :regulation_z3 %>
+      <div class="wca-regulation-z3-reason">
+        <%= f.input :regulation_z3_reason %>
+      </div>
     <% end %>
 
     <hr>
-    <%= f.input :remarks, disabled: is_actually_confirmed %>
+    <%= f.input :remarks, disabled: is_actually_confirmed, hint: t('simple_form.hints.competition.remarks_html', link: link_to("Article Z", "https://www.worldcubeassociation.org/regulations/#article-Z-optional", target: "_blank")) %>
 
     <% if @competition.being_cloned_from&.tabs&.present? %>
       <%= f.input :being_cloned_from_id, as: :hidden %>
       <%= f.input :clone_tabs, as: :boolean %>
     <% end %>
 
+    <hr>
     <div class="form-group">
       <div class="col-sm-offset-2 col-sm-10">
         <% if @competition.persisted? %>
@@ -291,5 +323,4 @@
         <% end %>
       </div>
     </div>
-
   <% end %>

@@ -59,7 +59,7 @@ Doorkeeper.configure do
   # reuse_access_token
 
   # Issue access tokens with refresh token (disabled by default)
-  # use_refresh_token
+  use_refresh_token
 
   # Provide support for an owner to be assigned to each registered application (disabled by default)
   # Optional parameter confirmation: true (default false) if you want to enforce ownership of
@@ -90,7 +90,9 @@ Doorkeeper.configure do
   # by default in non-development environments). OAuth2 delegates security in
   # communication to the HTTPS protocol so it is wise to keep this enabled.
   #
-  # force_ssl_in_redirect_uri !Rails.env.development?
+  # Note that we intentionally allow HTTP for localhost urls. This is needed by
+  # TNoodle, and is also useful for local devlopment.
+  force_ssl_in_redirect_uri { |uri| uri.host != 'localhost' }
 
   # Specify what grant flows are enabled in array of Strings. The valid
   # strings and the flows they enable are:

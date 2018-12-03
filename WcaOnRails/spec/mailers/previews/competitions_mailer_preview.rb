@@ -2,9 +2,35 @@
 
 # Preview all emails at http://localhost:3000/rails/mailers/competitions_mailer
 class CompetitionsMailerPreview < ActionMailer::Preview
-  def notify_board_of_confirmed_competition
+  def notify_wcat_of_confirmed_competition
     c = CompetitionDelegate.last.competition
-    CompetitionsMailer.notify_board_of_confirmed_competition(c.delegates[0], c)
+    CompetitionsMailer.notify_wcat_of_confirmed_competition(c.delegates[0], c)
+  end
+
+  def notify_organizer_of_confirmed_competition
+    c = CompetitionDelegate.last.competition
+    CompetitionsMailer.notify_organizer_of_confirmed_competition(c.delegates[0], c)
+  end
+
+  def notify_organizer_of_announced_competition
+    c = CompetitionDelegate.last.competition
+    p = "dummy_link"
+    CompetitionsMailer.notify_organizer_of_announced_competition(c, p)
+  end
+
+  def notify_organizer_of_addition_to_competition
+    c = CompetitionDelegate.last.competition
+    CompetitionsMailer.notify_organizer_of_addition_to_competition(c.delegates[0], c, c.organizers[0])
+  end
+
+  def notify_organizer_of_removal_from_competition
+    c = CompetitionDelegate.last.competition
+    CompetitionsMailer.notify_organizer_of_removal_from_competition(c.delegates[0], c, c.organizers[0])
+  end
+
+  def notify_board_of_confirmed_championship_competition
+    c = Competition.find("WC2013")
+    CompetitionsMailer.notify_wcat_of_confirmed_competition(c.delegates[0], c)
   end
 
   def notify_users_of_results_presence
@@ -29,5 +55,10 @@ class CompetitionsMailerPreview < ActionMailer::Preview
     end
     competition = report.competition
     CompetitionsMailer.notify_of_delegate_report_submission(competition)
+  end
+
+  def results_submitted
+    results_submission = FactoryBot.build :results_submission
+    CompetitionsMailer.results_submitted(Competition.last, results_submission, User.first)
   end
 end

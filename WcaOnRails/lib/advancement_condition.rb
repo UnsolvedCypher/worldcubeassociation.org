@@ -39,6 +39,16 @@ class AdvancementCondition
   def self.dump(cutoff)
     cutoff ? JSON.dump(cutoff.to_wcif) : nil
   end
+
+  def self.wcif_json_schema
+    {
+      "type" => ["object", "null"],
+      "properties" => {
+        "type" => { "type" => "string", "enum" => AdvancementCondition.subclasses.map(&:wcif_type) },
+        "level" => { "type" => "integer" },
+      },
+    }
+  end
 end
 
 class RankingCondition < AdvancementCondition
@@ -49,7 +59,7 @@ class RankingCondition < AdvancementCondition
   end
 
   def to_s(round)
-    I18n.t("advancement_condition.ranking", ranking: ranking, next_round_number: round.number + 1)
+    I18n.t("advancement_condition.ranking", ranking: ranking)
   end
 end
 
@@ -61,7 +71,7 @@ class PercentCondition < AdvancementCondition
   end
 
   def to_s(round)
-    I18n.t("advancement_condition.percent", percent: percent, next_round_number: round.number + 1)
+    I18n.t("advancement_condition.percent", percent: percent)
   end
 end
 
@@ -74,11 +84,11 @@ class AttemptResultCondition < AdvancementCondition
 
   def to_s(round)
     if round.event.timed_event?
-      I18n.t("advancement_condition.attempt_result.time", time: SolveTime.centiseconds_to_clock_format(attempt_result), next_round_number: round.number + 1)
+      I18n.t("advancement_condition.attempt_result.time", time: SolveTime.centiseconds_to_clock_format(attempt_result))
     elsif round.event.fewest_moves?
-      I18n.t("advancement_condition.attempt_result.moves", moves: attempt_result, next_round_number: round.number + 1)
+      I18n.t("advancement_condition.attempt_result.moves", moves: attempt_result)
     elsif round.event.multiple_blindfolded?
-      I18n.t("advancement_condition.attempt_result.points", points: SolveTime.multibld_attempt_to_points(attempt_result), next_round_number: round.number + 1)
+      I18n.t("advancement_condition.attempt_result.points", points: SolveTime.multibld_attempt_to_points(attempt_result))
     end
   end
 end

@@ -60,4 +60,19 @@ Rails.configuration.to_prepare do
       self.in_seconds * 100
     end
   end
+
+  ActiveRecord::Associations::CollectionProxy.class_eval do
+    def destroy_all!
+      self.each(&:destroy!)
+      self.reload
+    end
+  end
+
+  # Copied and modified from https://github.com/doorkeeper-gem/doorkeeper/issues/210#issuecomment-15895378
+  Doorkeeper::OAuth::PreAuthorization.class_eval do
+    old_validate_redirect_uri = instance_method(:validate_redirect_uri)
+    define_method(:validate_redirect_uri) do
+      return @client.application.dangerously_allow_any_redirect_uri ? true : old_validate_redirect_uri.bind(self).call
+    end
+  end
 end

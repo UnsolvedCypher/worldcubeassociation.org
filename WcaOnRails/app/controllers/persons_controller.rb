@@ -7,7 +7,7 @@ class PersonsController < ApplicationController
       format.js do
         persons = Person.in_region(params[:region]).order(:name)
         params[:search]&.split&.each do |part|
-          persons = persons.where("rails_persons.name LIKE :part OR wca_id LIKE :part", part: "%#{part}%")
+          persons = persons.where("MATCH(rails_persons.name) AGAINST (:name_match IN BOOLEAN MODE) OR wca_id LIKE :wca_id_part", name_match: "#{part}*", wca_id_part: "#{part}%")
         end
 
         render json: {
@@ -33,8 +33,8 @@ class PersonsController < ApplicationController
     @ranks_average = @person.ranksAverage
     @medals = @person.medals
     @records = @person.records
-    @results = @person.results.includes(:competition, :event, :format, :round_type).order("Events.rank, Competitions.start_date DESC, RoundTypes.rank DESC")
-    @world_championship_podiums = @person.world_championship_podiums
+    @results = @person.results.includes(:competition, :event, :format, :round_type).order("Events.rank, Competitions.start_date DESC, Competitions.id, RoundTypes.rank DESC")
+    @championship_podiums = @person.championship_podiums
     params[:event] ||= @results.first.event.id
   end
 end

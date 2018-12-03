@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-FactoryGirl.define do
+FactoryBot.define do
   factory :person do
     wca_id do
       mid = ('A'..'Z').to_a.sample(4).join
@@ -8,22 +8,22 @@ FactoryGirl.define do
       id = id.next while Person.exists?(wca_id: id)
       id
     end
-    subId 1
+    subId { 1 }
     name { Faker::Name.name }
     countryId { Country.real.sample.id }
-    gender "m"
-    year 1966
-    month 4
-    day 4
+    gender { "m" }
+    year { 1966 }
+    month { 4 }
+    day { 4 }
 
     trait :missing_dob do
-      year 0
-      month 0
-      day 0
+      year { 0 }
+      month { 0 }
+      day { 0 }
     end
 
     trait :missing_gender do
-      gender ""
+      gender { "" }
     end
 
     factory :person_with_multiple_sub_ids do
@@ -36,9 +36,9 @@ FactoryGirl.define do
 
     factory :person_who_has_competed_once do
       after(:create) do |person|
-        competition = FactoryGirl.create(:competition, :with_delegate)
-        FactoryGirl.create :result, person: person, competitionId: competition.id
-        FactoryGirl.create :result, person: person, competitionId: competition.id
+        competition = FactoryBot.create(:competition, :with_delegate)
+        FactoryBot.create :result, person: person, competitionId: competition.id
+        FactoryBot.create :result, person: person, competitionId: competition.id
       end
     end
   end

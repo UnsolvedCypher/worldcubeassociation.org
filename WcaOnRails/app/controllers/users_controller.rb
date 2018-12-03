@@ -18,25 +18,25 @@ class UsersController < ApplicationController
     respond_to do |format|
       format.html {}
       format.json do
-        @users = User.joins("INNER JOIN Countries ON iso2 = country_iso2")
+        @users = User.in_region(params[:region])
         params[:search]&.split&.each do |part|
-          like_query = %w(users.name wca_id email Countries.name).map do |column|
+          like_query = %w(users.name wca_id email).map do |column|
             column + " LIKE :part"
           end.join(" OR ")
           @users = @users.where(like_query, part: "%#{part}%")
         end
-        if params[:sort] == "country"
-          @users = @users.order("Countries.name #{params[:order]}")
-        elsif params[:sort]
+        params[:sort] = params[:sort] == "country" ? :country_iso2 : params[:sort]
+        if params[:sort]
           @users = @users.order(params[:sort] => params[:order])
         end
         render json: {
-          total: @users.count,
+          total: @users.size,
           rows: @users.limit(params[:limit]).offset(params[:offset]).map do |user|
             {
               wca_id: user.wca_id ? view_context.link_to(user.wca_id, person_path(user.wca_id)) : "",
               name: ERB::Util.html_escape(user.name),
-              country: user.country.id,
+              # Users don't have to provide a country upon registration
+              country: user.country&.id,
               email: ERB::Util.html_escape(user.email),
               edit: view_context.link_to("Edit", edit_user_path(user)),
             }
@@ -89,6 +89,10 @@ class UsersController < ApplicationController
     old_confirmation_sent_at = @user.confirmation_sent_at
     dangerous_change = current_user == @user && [:password, :password_confirmation, :email].any? { |attribute| user_params.key? attribute }
     if dangerous_change ? @user.update_with_password(user_params) : @user.update_attributes(user_params)
+      if @user.saved_change_to_delegate_status
+        # TODO: See https://github.com/thewca/worldcubeassociation.org/issues/2969.
+        DelegateStatusChangeMailer.notify_board_and_wqac_of_delegate_status_change(@user, current_user).deliver_now
+      end
       if current_user == @user
         # Sign in the user, bypassing validation in case their password changed
         bypass_sign_in @user
@@ -125,7 +129,7 @@ class UsersController < ApplicationController
 
   private def user_params
     params.require(:user).permit(current_user.editable_fields_of_user(user_to_edit).to_a).tap do |user_params|
-      if user_params.key?(:delegate_status) && !User.delegate_status_allows_senior_delegate(user_params[:delegate_status])
+      if user_params.key?(:delegate_status) && !User.delegate_status_requires_senior_delegate(user_params[:delegate_status])
         user_params["senior_delegate_id"] = nil
       end
       if user_params.key?(:wca_id)

@@ -45,18 +45,8 @@ class RegistrationsController < ApplicationController
       render :psych_results_posted
       return
     end
-    @sort_by = params[:sort_by]
-    if @sort_by == @event.recommended_format.sort_by
-      @sort_by_second = @event.recommended_format.sort_by_second
-    elsif @sort_by == @event.recommended_format.sort_by_second
-      @sort_by_second = @event.recommended_format.sort_by
-      @sort_by = @event.recommended_format.sort_by_second
-    else
-      @sort_by = @event.recommended_format.sort_by
-      @sort_by_second = @event.recommended_format.sort_by_second
-    end
 
-    @registrations = @competition.psych_sheet_event(@event, @sort_by, @sort_by_second)
+    @psych_sheet = @competition.psych_sheet_event(@event, params[:sort_by])
   end
 
   def index
@@ -153,7 +143,7 @@ class RegistrationsController < ApplicationController
   def update
     @registration = Registration.find(params[:id])
     @competition = @registration.competition
-    if params[:from_admin_view] && @registration.updated_at.to_datetime != params[:registration][:updated_at].to_datetime
+    if params[:from_admin_view] && @registration.updated_at.to_time != params[:registration][:updated_at].to_time
       flash.now[:danger] = "Did not update registration because competitor updated registration since the page was loaded."
       render :edit
       return
@@ -244,18 +234,29 @@ class RegistrationsController < ApplicationController
   rescue Stripe::CardError => e
     flash[:danger] = 'Unsuccessful payment: ' + e.message
     redirect_to competition_register_path
-  rescue => e
-    flash[:danger] = 'Something went wrong: ' + e.message
-    redirect_to competition_register_path
   end
 
   def refund_payment
     registration = Registration.find(params[:id])
     payment = RegistrationPayment.find(params[:payment_id])
+    refund_amount_param = params.require(:payment).require(:refund_amount)
+    refund_amount = refund_amount_param.to_i
+
+    if refund_amount > payment.amount_available_for_refund
+      flash[:danger] = "You are not allowed to refund more than the competitor has paid."
+      redirect_to edit_registration_path(registration)
+      return
+    end
+    if refund_amount < 0
+      flash[:danger] = "The refund amount must be greater than zero."
+      redirect_to edit_registration_path(registration)
+      return
+    end
 
     refund = Stripe::Refund.create(
       {
         charge: payment.stripe_charge_id,
+        amount: refund_amount,
       },
       stripe_account: registration.competition.connected_stripe_account_id,
     )
@@ -268,9 +269,6 @@ class RegistrationsController < ApplicationController
     )
 
     flash[:success] = 'Payment was refunded'
-    redirect_to edit_registration_path(registration)
-  rescue => e
-    flash[:danger] = 'Something went wrong with the refund: ' + e.message
     redirect_to edit_registration_path(registration)
   end
 

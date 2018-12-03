@@ -71,7 +71,7 @@
 
         <%= f.input :name, disabled: !editable_fields.include?(:name) %>
         <%= f.input :dob, as: :date_picker, disabled: !editable_fields.include?(:dob) %>
-        <%= f.input :gender, collection: User::ALLOWABLE_GENDERS, label_method: User::GENDER_LABEL_METHOD, disabled: !editable_fields.include?(:gender) %>
+        <%= f.input :gender, disabled: !editable_fields.include?(:gender) %>
         <%= f.input :country_iso2, collection: Country.all_sorted_by(I18n.locale, real: true), value_method: lambda { |c| c.iso2 }, label_method: lambda { |c| c.name }, disabled: !editable_fields.include?(:country_iso2) %>
 
         <% if current_user.can_view_all_users? %>
@@ -113,7 +113,7 @@
         <% end %>
 
         <% if current_user.can_view_all_users? %>
-          <%= f.input :delegate_status, collection: User.delegate_statuses.keys, label_method: lambda { |k| k.titleize }, disabled: !editable_fields.include?(:senior_delegate_id) %>
+          <%= f.input :delegate_status, disabled: !editable_fields.include?(:senior_delegate_id) %>
           <%= f.association :senior_delegate, disabled: !editable_fields.include?(:senior_delegate_id) %>
           <%= f.input :region, disabled: !editable_fields.include?(:region) %>
 
@@ -193,6 +193,14 @@
                     <li><%= guideline %></li>
                   <% end %>
                 </ul>
+                <% if @user.any_kind_of_delegate? %>
+                  <br /><strong><%= t('.delegate_avatar_guidelines.title') %></strong>
+                  <ul>
+                    <% t('.delegate_avatar_guidelines.paragraphs').values.each do |guideline| %>
+                      <li><%= guideline %></li>
+                    <% end %>
+                  </ul>
+                <% end %>
               </div>
               <%= f.input :pending_avatar, as: :file, disabled: !editable_fields.include?(:pending_avatar) %>
               <%= f.hidden_field :pending_avatar_cache %>
@@ -208,7 +216,9 @@
             <% end %>
           </div>
           <div class="col-sm-6 text-center">
-            <%= image_tag @user.avatar.url, class: "img-responsive center-block", id: "avatar-img" %>
+            <div class="image-preview-container" data-input-selector="#user_pending_avatar" data-max-height="400" data-orientation="true">
+              <%= image_tag @user.avatar.url, class: "img-responsive center-block", id: "avatar-img" %>
+            </div>
             <% if @user.avatar? %>
               <h4><%= t('.your_thumbnail') %></h4>
               <%= link_to users_avatar_thumbnail_edit_path(@user) do %>

@@ -1,3 +1,4 @@
+<% provide(:include_auto_numeric, true) %>
 <%= horizontal_simple_form_for :payment, url: competition_process_payment_path(@competition), html: { id: :form_payment } do |f| %>
   <%= render 'entry_fee', label: "Paid", money_amount: @registration.paid_entry_fees %>
   <%= f.input :stripe_token, as: :hidden, input_html: { id: :stripe_token } %>
@@ -18,7 +19,8 @@
       var handler = StripeCheckout.configure({
         key: '<%= ENVied.STRIPE_PUBLISHABLE_KEY %>',
         locale: 'auto',
-        image: '<%= image_url("/files/WCALogo3Dsmall.png") %>',
+        image: '<%= image_url("wca_logo.svg") %>',
+        email: <%= current_user.email.to_json.html_safe %>,
         name: 'World Cube Association',
         description: 'Registration fee',
         currency: '<%= @registration.outstanding_entry_fees.currency.iso_code %>',

@@ -2,11 +2,10 @@ inherit_from: .rubocop_todo.yml
 
 AllCops:
   TargetRubyVersion: 2.3
+  DisplayCopNames: true
   Exclude:
     - 'node_modules/**/*'
-    - 'bin/webpack-dev-server'
-    - 'bin/webpack'
-    - 'bin/yarn'
+    - 'bin/**/*'
     - 'vendor/**/*'
 
 Bundler/OrderedGems:
@@ -21,8 +20,12 @@ Lint/UnusedBlockArgument:
 Lint/UnusedMethodArgument:
   Enabled: false
 
+Naming/AccessorMethodName:
+  Enabled: false
+
 Style/Alias:
   Enabled: false
+
 Style/EmptyMethod:
   EnforcedStyle: expanded
 
@@ -43,7 +46,14 @@ Style/TrailingCommaInArguments:
   # for all parenthesized method calls with arguments.
   EnforcedStyleForMultiline: comma
 
-Style/TrailingCommaInLiteral:
+Style/TrailingCommaInArrayLiteral:
+  # If `comma`, the cop requires a comma after the last argument, but only for
+  # parenthesized method calls where each argument is on its own line.
+  # If `consistent_comma`, the cop requires a comma after the last argument,
+  # for all parenthesized method calls with arguments.
+  EnforcedStyleForMultiline: comma
+
+Style/TrailingCommaInHashLiteral:
   # If `comma`, the cop requires a comma after the last item in an array or
   # hash, but only when each item is on its own line.
   # If `consistent_comma`, the cop requires a comma after the last item of all
@@ -84,10 +94,16 @@ Metrics/MethodLength:
 Metrics/ModuleLength:
   Enabled: false
 
+Naming/MemoizedInstanceVariableName:
+  Enabled: false
+
 Performance/RedundantMatch:
   Enabled: false
 
 Style/NegatedIf:
+  Enabled: false
+
+Style/AccessModifierDeclarations:
   Enabled: false
 
 Style/AsciiComments:
@@ -153,7 +169,7 @@ Style/RedundantParentheses:
 Style/SignalException:
   EnforcedStyle: only_raise
 
-Style/SpaceAroundOperators:
+Layout/SpaceAroundOperators:
   Enabled: false
 
 Style/StringLiteralsInInterpolation:
@@ -168,5 +184,20 @@ Style/WordArray:
 Style/SymbolProc:
   Enabled: false
 
-Style/PredicateName:
+Naming/PredicateName:
+  Enabled: false
+
+Naming/UncommunicativeBlockParamName:
+  Enabled: false
+
+Naming/UncommunicativeMethodParamName:
+  Enabled: false
+
+Style/YodaCondition:
+  Enabled: false
+
+Style/FormatStringToken:
+  Enabled: false
+
+Layout/EmptyLineAfterGuardClause:
   Enabled: false

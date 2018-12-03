@@ -21,15 +21,11 @@ require( 'includes/_footer.php' );
 #----------------------------------------------------------------------
 function showContent () {
 #----------------------------------------------------------------------
-
-  #--- In debug mode, just calculate freshly and don't cache
-  if ( wcaDebug() ) {
-    showResults();
-    return;
-  }
-
+  global $argv;
   #--- If there's no cache or this is an update request, then freshly build the cache
-  if ( ! file_exists( 'generated/statistics.cache' ) || getBooleanParam( 'update8392' ) ) {
+  if ( $argv[1] == 'update' ) {
+    $logMessage = sprintf( "%s: Started a new computation.", wcaDate() );
+    file_put_contents( 'generated/statistics.log', "$logMessage\n", FILE_APPEND );
     $startTime = microtime_float();
     ob_start();
     showResults();
@@ -52,9 +48,8 @@ function showResults () {
   echo "<h1>Fun Statistics</h1>\n\n<br>";
   echo "<p style='padding-left:20px;padding-right:20px;font-weight:bold'>Here you see a selection of fun statistics, based on official WCA competition results.</p>";
   echo "<p style='padding-left:20px;padding-right:20px;font-weight:bold'>There are also three separate statistics pages: <a href='misc/evolution/'>Evolution of Records</a>, <a href='misc/sum_of_ranks/'>Sum of Ranks</a>, and <a href='misc/missing_averages/'>Missing Averages</a>.</p>";
-  #--- TODO: Please remove the "New" label after 18 July 2017.
-  echo "<p style='padding-left:20px;padding-right:20px;font-weight:bold'><span style='color: red;border: 2px solid red;padding: 2px;border-radius: 5px;font-size: 12px;'>New</span> You can find connections between cubers (aka Six Degrees) <a href='/relations'>here</a>.</p>";
-  echo "<p style='padding-left:20px;padding-right:20px;color:gray;font-size:10px'>Generated on " . wcaDate() . ".</p>";
+  echo "<p style='padding-left:20px;padding-right:20px;font-weight:bold'>You can find connections between cubers (aka Six Degrees) <a href='/relations'>here</a>.</p>";
+  echo "<p style='padding-left:20px;padding-right:20px;color:gray;font-weight:normal'>This page is automatically updated every 24 hours. Last Update: " . wcaDate() . ".</p>";
 
   #--- Get all the list definitions.
   defineAllLists();

@@ -18,6 +18,10 @@ module Locales
       "flag_id": "es",
       "name": "Español",
     },
+    "fi": {
+      "flag_id": "fi",
+      "name": "Suomi",
+    },
     "fr": {
       "flag_id": "fr",
       "name": "Français",
@@ -33,6 +37,10 @@ module Locales
     "ja": {
       "flag_id": "jp",
       "name": "日本語",
+    },
+    "ko": {
+      "flag_id": "kr",
+      "name": "한국어",
     },
     "pl": {
       "flag_id": "pl",
@@ -81,6 +89,14 @@ module Locales
     "sl": {
       "flag_id": "si",
       "name": "Slovensko",
+    },
+    "id": {
+      "flag_id": "id",
+      "name": "Bahasa Indonesia",
+    },
+    "vi": {
+      "flag_id": "vn",
+      "name": "Tiếng Việt",
     },
   }.freeze
 end

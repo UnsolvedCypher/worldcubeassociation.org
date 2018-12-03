@@ -15,7 +15,7 @@
        {
          country: "Australia",
          name: "Speedcubing Australia",
-         url: "http://www.speedcubing.com.au",
+         url: "http://www.speedcubing.org.au",
          logo: "Cube_FA_RGB_pos.png",
        },
        {
@@ -39,12 +39,13 @@
        {
          country: "Denmark",
          name: "Dansk Speedcubing Forening",
-         url: "http://speedcubing.dk",
+         url: "http://danskspeedcubingforening.dk",
+         logo: "denmark.png",
        },
        {
          country: "Estonia",
          name: "Eesti Kuubik",
-         url: "http://www.estonianopen.eu/eng/kontakt.php",
+         url: "http://www.estonianopen.eu",
          logo: "estonian_open.png",
        },
        {
@@ -74,14 +75,32 @@
        {
          country: "Japan",
          name: "Japan Rubik's Cube Association",
-         url: "http://jrca.cc/main.html",
+         url: "http://jrca.cc",
          logo: "jrca.jpg",
+       },
+       {
+         country: "Kazakhstan",
+         name: "Kazakhstan Speedcubing Federation",
+         url: "http://cubing.kz/",
+         logo: "kazakhstan.png",
        },
        {
          country: "Korea",
          name: "Korea Cube Culture United",
-         url: "http://kccu.co.kr/xe/",
+         url: "https://sites.google.com/view/kccu",
          logo: "korea.png",
+       },
+       {
+         country: "Malaysia",
+         name: "Malaysia Cube Association",
+         url: "https://www.mycubeassociation.com",
+         logo: "myca.svg",
+       },
+       {
+         country: "Netherlands",
+         name: "Speedcubing Nederland",
+         url: "http://www.kubuswedstrijden.nl",
+         logo: "nederland.png",
        },
        {
          country: "New Zealand",
@@ -102,13 +121,13 @@
        {
          country: "Philippines",
          name: "Philippine Cube Association",
-         url: "http://philippinecubersassociation.weebly.com",
-         logo: "philippines.jpg",
+         url: "https://www.facebook.com/PhilippineCubersAssociation",
+         logo: "philippines.png",
        },
        {
          country: "Poland",
-         name: "Polish Speedcubing Federation",
-         url: "http://www.kostkarubika.org",
+         name: "Polish Speedcubing Association",
+         url: "http://www.speedcubing.pl",
          logo: "pss.jpg",
        },
        {
@@ -120,8 +139,8 @@
        {
          country: "Russia",
          name: "Speedcubing.ru",
-         url: "http://www.speedcubing.ru",
-         logo: "speedcubing.ru.png",
+         url: "https://speedcubing.ru",
+         logo: "russia.png",
        },
        {
          country: "Spain",
@@ -156,7 +175,7 @@
        {
          country: "Turkey",
          name: "CubingTR",
-         url: "http://www.cubingtr.com",
+         url: "http://cubingtr.org",
          logo: "cubingtr.png",
        },
        {
@@ -169,12 +188,12 @@
          country: "United Kingdom",
          name: "UK Cube Association",
          url: "http://ukca.org",
-         logo: "ukcalogo.jpg",
+         logo: "ukcalogo.png",
        },
        {
          country: "United States",
          name: "Cubing USA",
-         url: "http://www.cubingusa.com",
+         url: "http://www.cubingusa.org",
          logo: "cubing_usa.svg",
        },
   ] %>
@@ -211,11 +230,5 @@
   </ol>
 
   <h3><%= t('regional_organizations.application_instructions.title') %></h3>
-  <p><%= t('regional_organizations.application_instructions.description') %></p>
-  <ol>
-    <% # We want to iterate through the *English* entries: so that if the translation doesn't have it, it will fall back to English. %>
-    <% t('regional_organizations.application_instructions.list', locale: :en).each do |key, en_value| %>
-      <li><%= t("regional_organizations.application_instructions.list.#{key}") %></li>
-    <% end %>
-  </ol>
+  <p><%= t('regional_organizations.application_instructions.description_html') %></p>
 </div>

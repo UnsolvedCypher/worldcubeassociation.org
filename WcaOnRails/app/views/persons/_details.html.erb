@@ -1,6 +1,11 @@
 <div>
   <div class="text-center">
-    <h2><%= @person.name %></h2>
+    <h2>
+      <%= @person.name %>
+      <% if @person.user && current_user&.can_edit_user?(@person.user) %>
+        <%= link_to icon("edit"), edit_user_path(@person.user) %>
+      <% end %>
+    </h2>
     <!-- Handle multiple sub ids. -->
     <% if @previous_persons.any? %>
       <h4>
@@ -8,11 +13,7 @@
       </h4>
     <% end %>
     <% if @person.user&.avatar %>
-      <%= image_tag @person.user.avatar, class: "avatar" %>
-    <% end %>
-    <!-- Handle people with in memoriam. -->
-    <% if PersonsHelper::IN_MEMORIAM[@person.wca_id] %>
-      <h4><%= link_to t('persons.show.in_memoriam'), PersonsHelper::IN_MEMORIAM[@person.wca_id] %></h4>
+      <%= image_tag @person.user.avatar.url, class: "avatar" %>
     <% end %>
   </div>
   <div class="details">
@@ -27,7 +28,7 @@
         </tr>
       </thead>
       <tbody>
-        <td class="country"><%= flag_icon @person.country_iso2, 32 %> <%= @person.country.name %></td>
+        <td class="country"><%= flag_icon @person.country_iso2 %> <%= @person.country.name %></td>
         <td><%= @person.wca_id %></td>
         <%= content_tag :td, User::GENDER_LABEL_METHOD.call(@person.gender.to_sym) if @person.gender_visible? %>
         <td><%= @person.competitions.count %></td>

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 class PostsController < ApplicationController
+  include TagsHelper
   before_action :authenticate_user!, except: [:index, :rss, :show]
   before_action -> { redirect_to_root_unless_user(:can_create_posts?) }, except: [:index, :rss, :show]
 
@@ -15,7 +16,13 @@ class PostsController < ApplicationController
   end
 
   def rss
-    @posts = Post.where(world_readable: true).order(created_at: :desc).includes(:author).page(params[:page])
+    tag = params[:tag]
+    if tag
+      @posts = Post.joins(:post_tags).where('post_tags.tag = ?', tag)
+    else
+      @posts = Post
+    end
+    @posts = @posts.where(world_readable: true).order(created_at: :desc).includes(:author).page(params[:page])
 
     # Force responding with xml, regardless of the given HTTP_ACCEPT headers.
     request.format = :xml

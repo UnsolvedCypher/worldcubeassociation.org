@@ -18,7 +18,7 @@ unless node.chef_environment.start_with?("development")
   cron "backup" do
     minute '0'
     hour '0'
-    weekday '1'
+    weekday 'MON'
 
     path path
     mailto admin_email
@@ -57,6 +57,32 @@ unless node.chef_environment.start_with?("development")
     environment html_format_envvars
     user username
     command init_php_commands.last
+  end
+end
+
+unless node.chef_environment.start_with?("development")
+  cron "update https certificate via acme.sh" do
+    minute '19'
+    hour '0'
+    weekday '*'
+
+    path path
+    mailto admin_email
+    user username
+    command '"/home/cubing/.acme.sh"/acme.sh --cron --home "/home/cubing/.acme.sh" > /dev/null'
+  end
+end
+
+unless node.chef_environment.start_with?("development")
+  cron "clear rails cache" do
+    minute '0'
+    hour '5'
+    weekday 'MON,WED,SAT'
+
+    path path
+    mailto admin_email
+    user username
+    command "(cd #{repo_root}/WcaOnRails; RACK_ENV=production bin/rake tmp:cache:clear)"
   end
 end
 

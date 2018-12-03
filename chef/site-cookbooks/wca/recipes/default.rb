@@ -1,9 +1,10 @@
+require 'fileutils'
 require 'shellwords'
 require 'securerandom'
 
 include_recipe "wca::base"
 apt_repository 'nodejs' do
-  uri 'https://deb.nodesource.com/node_7.x'
+  uri 'https://deb.nodesource.com/node_8.x'
   components ['trusty', 'main']
   key 'https://deb.nodesource.com/gpgkey/nodesource.gpg.key'
 end
@@ -73,6 +74,23 @@ if username == "cubing"
 end
 rails_root = "#{repo_root}/WcaOnRails"
 
+#### SSH Keys
+# acces.sh depends on jq https://github.com/FatBoyXPC/acces.sh
+package 'jq'
+
+gen_auth_keys_path = "/home/#{username}/gen-authorized-keys.sh"
+template gen_auth_keys_path do
+  source "gen-authorized-keys.sh.erb"
+  mode 0755
+  owner username
+  group username
+  variables({
+    secrets: secrets,
+  })
+end
+execute gen_auth_keys_path do
+  user username
+end
 
 #### Mysql
 db = {
@@ -122,7 +140,7 @@ package 'g++'
 package 'libmysqlclient-dev'
 package 'imagemagick'
 
-ruby_version = File.read("#{repo_root}/WcaOnRails/.ruby-version").match(/\d+\.\d+/)[0]
+ruby_version = File.read("#{repo_root}/.ruby-version").match(/\d+\.\d+/)[0]
 node.default['brightbox-ruby']['version'] = ruby_version
 include_recipe "brightbox-ruby"
 chef_env_to_rails_env = {
@@ -155,16 +173,36 @@ logrotate_app 'delayed_job-wca' do
 end
 
 # Run mailcatcher in every environment except production.
-if rails_env != "production"
+if node.chef_environment != "production"
   gem_package "mailcatcher"
   execute "start mailcatcher" do
-    command "mailcatcher --http-ip=0.0.0.0"
+    command "mailcatcher --no-quit --http-ip=0.0.0.0"
     not_if "pgrep -f [m]ailcatcher"
   end
 end
 
 # Use HTTPS in non development mode
 https = !node.chef_environment.start_with?("development")
+server_name = { "production" => "www.worldcubeassociation.org", "staging" => "staging.worldcubeassociation.org", "development" => "" }[node.chef_environment]
+
+# If /etc/ssh is not a symlink, back it up and create a symlink.
+unless File.symlink?("/etc/ssh")
+  FileUtils.mv "/etc/ssh", "/etc/ssh-backup"
+  FileUtils.ln_s "#{repo_root}/secrets/etc_ssh-#{server_name}", "/etc/ssh"
+  service "ssh" do
+    action :restart
+  end
+end
+
+#### Let's Encrypt with acme.sh
+if https
+  home_dir = "#{repo_root}/.."
+  acme_sh_dir = "#{home_dir}/.acme.sh"
+  link acme_sh_dir do
+    to "#{repo_root}/secrets/https/acme.sh-#{server_name}"
+    owner username
+  end
+end
 
 #### Nginx
 # Unfortunately, we have to compile nginx from source to get the auth request module
@@ -233,7 +271,6 @@ logrotate_app 'nginx-wca' do
   postrotate "[ ! -f /var/run/nginx.pid ] || kill -USR1 `cat /var/run/nginx.pid`"
 end
 
-server_name = { "production" => "www.worldcubeassociation.org", "staging" => "staging.worldcubeassociation.org", "development" => "" }[node.chef_environment]
 template "/etc/nginx/conf.d/worldcubeassociation.org.conf" do
   source "worldcubeassociation.org.conf.erb"
   mode 0644
@@ -291,6 +328,17 @@ template "#{rails_root}/.env.production" do
 end
 
 #### phpMyAdmin
+pma_path = "#{repo_root}/webroot/results/admin/phpMyAdmin"
+bash 'install phpMyAdmin' do
+  cwd ::File.dirname("/tmp")
+  code <<-EOH
+    cd /tmp
+    wget https://files.phpmyadmin.net/phpMyAdmin/4.7.6/phpMyAdmin-4.7.6-english.tar.gz
+    tar xvf phpMyAdmin-4.7.6-english.tar.gz
+    mv phpMyAdmin-4.7.6-english #{pma_path}
+    EOH
+  not_if { ::File.exist?(pma_path) }
+end
 template "#{repo_root}/webroot/results/admin/phpMyAdmin/config.inc.php" do
   source "phpMyAdmin_config.inc.php.erb"
   variables({
@@ -329,10 +377,6 @@ end
 execute "sed -i -r 's/(; *)?max_input_vars = .*/max_input_vars = #{PHP_MAX_INPUT_VARS}/g' /etc/php5/fpm/php.ini" do
   not_if "grep '^max_input_vars = #{PHP_MAX_INPUT_VARS}' /etc/php5/fpm/php.ini"
 end
-# Install pear mail
-# http://www.markstechstuff.com/2009/04/installing-pear-mail-for-php-on-ubuntu.html
-package "php-pear"
-execute "pear install mail Net_SMTP Auth_SASL mail_mime"
 # Install mysqli for php. See:
 #  http://stackoverflow.com/a/22525205
 package "php5-mysqlnd"
@@ -373,6 +417,7 @@ elsif node.chef_environment == "staging"
   db_setup_lockfile = '/tmp/db-development-loaded'
   execute "bundle exec rake db:load:development" do
     cwd rails_root
+    user username
     environment({
       "DATABASE_URL" => db_url,
       "RACK_ENV" => rails_env,

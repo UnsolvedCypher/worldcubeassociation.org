@@ -1,5 +1,5 @@
 /*
- * Code to help 
+ * Code to help
  */
 
 function get_comp_info(obj) {
@@ -10,6 +10,18 @@ function get_comp_info(obj) {
   })
   .done( function(data) {
     $('#notice_area').html(data);
+
+    var $postResultsLink = $('#post-results-link');
+    var $mainEventSelect = $('#main-event-select');
+    $mainEventSelect.change(function() {
+      var compId = $postResultsLink.data('competition-id');
+      var postResultsUrl = "/competitions/" + compId + "/post/results";
+      var eventId = $mainEventSelect.val();
+      if(eventId) {
+        postResultsUrl += "?event_id=" + eventId;
+      }
+      $postResultsLink.attr('href', postResultsUrl);
+    }).trigger('change');
 
     // remove scramble links
     $('#notice_area a.remove_link').click(function(e) {
@@ -32,8 +44,12 @@ function get_comp_info(obj) {
       //Load page into table cell.
       $.ajax({
         url: $(this).attr('href'),
+        dataType: 'json',
       })
       .done( function(data) {
+        if (data.status != 'OK') {
+          alert(data.message);
+        }
         get_comp_info(0);
       });
     });
@@ -46,4 +62,8 @@ $(document).ready(function() {
   selectize_competition_field("#form-element-competitionId");
   get_comp_info(0);
   $('#form-element-competitionId').change(get_comp_info);
+  // Prevent multiple form submissions.
+  $('#results-submission').on('submit', function() {
+    $('#form-element-submit').hide();
+  });
 });

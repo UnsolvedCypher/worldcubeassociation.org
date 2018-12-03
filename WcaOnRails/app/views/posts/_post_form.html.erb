@@ -1,3 +1,4 @@
+<% provide(:include_markdown_editor, true) %>
 <% url = @post.new_record? ? posts_path : @post.update_path %>
 <%= simple_form_for @post, url: url, html: { class: 'form-horizontal' } do |f| %>
   <%= f.input :title, disabled: !editable_post_fields.include?(:title), autofocus: true %>
@@ -6,18 +7,7 @@
   <% if editable_post_fields.include? :tags %>
     <%= f.input :tags %>
     <script>
-      $('input#post_tags').selectize({
-        plugins: ['remove_button'],
-        delimiter: ',',
-        persist: false,
-        options: <%= PostTag.distinct.pluck(:tag).map { |tag| { value: tag, text: tag } }.to_json.html_safe %>,
-        create: function(input) {
-          return {
-            value: input,
-            text: input
-          };
-        },
-      });
+      $('input#post_tags').selectize(wca.defaultSelectizeOptions(<%= all_to_options(PostTag) %>));
     </script>
   <% end %>
 

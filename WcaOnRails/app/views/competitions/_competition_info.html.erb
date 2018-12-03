@@ -1,6 +1,6 @@
 <div class="row competition-info">
   <div class="col-md-6">
-    <dl class="dl-horizontal">
+    <dl class="dl-horizontal compact">
       <dt><%= t '.date' %></dt>
       <dd><%= wca_date_range(competition.start_date, competition.end_date) %></dd>
 
@@ -18,8 +18,10 @@
         <dd><%=md competition.venueDetails %></dd>
       <% end %>
 
-      <dt><%= t '.website' %></dt>
-      <dd><%= link_to "#{competition.name} website", competition.website, target: "_blank" %></dd>
+      <% if competition.external_website %>
+        <dt><%= t '.website' %></dt>
+        <dd><%= link_to "#{competition.name} website", competition.website, target: "_blank" %></dd>
+      <% end %>
 
       <% if competition.organizers.length > 0 %>
         <dt><%= t('.organizer_plural', count: competition.organizers.length) %></dt>
@@ -38,25 +40,9 @@
         <% if competition.contact.present? %>
           <%=md competition.contact %>
         <% else %>
-          <%= mail_to competition.managers.map(&:email).join(","), icon("envelope"), subject: "Question about #{competition.name}", target: "_blank", class: "hide-new-window-icon" %>
+          <%= mail_to competition.managers.map(&:email).join(","), competition.managers.map(&:email).join(", "), subject: "Question about #{competition.name}", target: "_blank", class: "hide-new-window-icon" %>
         <% end %>
       </dd>
-
-      <% if competition.competitor_limit_enabled? %>
-        <dt><%= t '.competitor_limit' %></dt>
-        <dd><%= competition.competitor_limit %></dd>
-      <% end %>
-
-      <% if competition.has_fees? %>
-        <dt><%= t '.entry_fee' %></dt>
-        <dd><%= humanized_money_with_symbol competition.base_entry_fee %></dd>
-        <% competition.competition_events.each do |competition_event| %>
-          <% if competition_event.has_fee? %>
-            <dt><%= competition_event.event.name %></dt>
-            <dd><%= humanized_money_with_symbol competition_event.fee %></dd>
-          <% end %>
-        <% end %>
-      <% end %>
     </dl>
   </div>
 
@@ -64,6 +50,20 @@
     <dl class="dl-horizontal">
       <dt><%= t '.information' %></dt>
       <dd><%=md competition.information %></dd>
+    </dl>
+
+    <dl class="dl-horizontal">
+      <dt><%= t '.events' %></dt>
+      <dd class="competition-events-list">
+        <% @competition.events.each do |event| %>
+          <%= cubing_icon event.id, data: { toggle: "tooltip", placement: "top", container: "body" }, title: event.name %>
+        <% end %>
+      </dd>
+
+      <% if competition.results_posted? %>
+        <dt><%= t 'competitions.nav.menu.competitors' %></dt>
+        <dd><%= @competition.competitors.count %></dd>
+      <% end %>
     </dl>
 
     <% media = competition.media.accepted %>
@@ -96,4 +96,65 @@
     <% end %>
 
   </div>
+  <div class="col-md-12">
+    <dl class="dl-horizontal">
+      <% if competition.registration_open.present? && competition.registration_close.present? %>
+        <dt><%= t '.registration_period.label' %></dt>
+        <dd>
+          <p>
+            <% if competition.registration_not_yet_opened? %>
+              <%= t(".registration_period.range_future_html",
+                  start_date_and_time: wca_local_time(competition.registration_open),
+                  end_date_and_time: wca_local_time(competition.registration_close)) %>
+            <% elsif competition.registration_past? %>
+              <%= t(".registration_period.range_past_html",
+                  start_date_and_time: wca_local_time(competition.registration_open),
+                  end_date_and_time: wca_local_time(competition.registration_close)) %>
+            <% else %>
+              <%= t(".registration_period.range_ongoing_html",
+                  start_date_and_time: wca_local_time(competition.registration_open),
+                  end_date_and_time: wca_local_time(competition.registration_close)) %>
+            <% end %>
+          </p>
+        </dd>
+      <% end %>
+      <dt><%= t '.registration_requirements' %></dt>
+      <dd>
+        <% collapse = @competition.is_probably_over? %>
+        <% if collapse %>
+          <div id="show_registration_requirements">
+            <%= t('competitions.competition_info.click_to_display_requirements_html', link_here: link_to(t('common.here'), "#")) %>
+          </div>
+          <div id="hide_registration_requirements">
+            <%= link_to(t('competitions.competition_info.hide_requirements'), "#") %>
+          </div>
+        <% end %>
+        <div class="<%= collapse ? "collapse" : "" %>" id="registration_requirements_text">
+          <%= render "registration_requirements", show_links_to_register_page: true %>
+        </div>
+      </dd>
+    </dl>
+  </div>
 </div>
+
+<% if collapse %>
+  <script>
+    $(function () {
+      $("#registration_requirements_text").collapse({
+        toggle: false
+      });
+      $("#show_registration_requirements a").click(function (e) {
+        e.preventDefault();
+        $("#registration_requirements_text").collapse("show");
+        $("#show_registration_requirements").hide();
+        $("#hide_registration_requirements").show();
+      });
+      $("#hide_registration_requirements a").click(function (e) {
+        e.preventDefault();
+        $("#registration_requirements_text").collapse("hide");
+        $("#hide_registration_requirements").hide();
+        $("#show_registration_requirements").show();
+      });
+    });
+  </script>
+<% end %>

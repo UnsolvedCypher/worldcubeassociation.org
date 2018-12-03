@@ -1,5 +1,8 @@
 onPage('users#edit, users#update', function() {
   // Hide/show senior delegate select based on what the user's role is.
+  // This is a copy of def self.delegate_status_requires_senior_delegate(delegate_status) in the user model
+  // https://github.com/thewca/worldcubeassociation.org/blob/master/WcaOnRails/app/models/user.rb#L299-L308
+  // It is necessary to fix both files for changes to work
   $('select[name="user[delegate_status]"]').on("change", function(e) {
     var delegateStatus = this.value;
     var seniorDelegateRequired = {
@@ -7,7 +10,6 @@ onPage('users#edit, users#update', function() {
       candidate_delegate: true,
       delegate: true,
       senior_delegate: false,
-      board_member: false,
     }[delegateStatus];
 
     var $seniorDelegateSelect = $('.form-group.user_senior_delegate');
@@ -53,18 +55,6 @@ onPage('users#edit, users#update', function() {
       alert($confirmation.data('alert'));
     }
   });
-  // Render a preview of an avatar whenever a new one is selected.
-  var $avatar = $('#avatar-img');
-  var reader = new FileReader();
-  reader.onload = function() {
-    $avatar[0].src = reader.result;
-  };
-  $('#user_pending_avatar').on('change', function() {
-    var file = this.files[0];
-    if(file) {
-      reader.readAsDataURL(file);
-    }
-  });
 });
 
 
@@ -72,6 +62,7 @@ onPage('users#edit, users#update', function() {
 var usersTableAjax = {
   queryParams: function(params) {
     return $.extend(params || {}, {
+      region: $('#region').val(),
       search: $('#search').val(),
     });
   },
@@ -109,6 +100,7 @@ onPage('users#index', function() {
     $table.bootstrapTable('refresh');
   }
 
+  $('#region').on('change', reloadUsers);
   $('#search').on('input', _.debounce(reloadUsers, TEXT_INPUT_DEBOUNCE_MS));
 
   $table.on('load-success.bs.table', function(e, data) {

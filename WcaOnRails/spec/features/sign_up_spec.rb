@@ -3,8 +3,9 @@
 require "rails_helper"
 
 RSpec.feature "Sign up" do
-  let!(:person) { FactoryGirl.create(:person_who_has_competed_once, year: 1988, month: 2, day: 3) }
-  let!(:person_without_dob) { FactoryGirl.create :person, year: 0, month: 0, day: 0 }
+  let!(:person) { FactoryBot.create(:person_who_has_competed_once, year: 1988, month: 2, day: 3) }
+  let!(:person_without_dob) { FactoryBot.create :person, year: 0, month: 0, day: 0 }
+  let!(:custom_delegate) { FactoryBot.create(:delegate) }
 
   context 'when signing up as a returning competitor', js: true do
     it 'disables sign up button until the user selects "have competed"' do
@@ -27,21 +28,16 @@ RSpec.feature "Sign up" do
 
       # They have not selected a valid WCA ID yet, so don't show the birthdate verification
       # field.
-      expect(page.find("div.user_dob_verification", visible: false).visible?).to eq false
+      expect(page).to have_selector("div.user_dob_verification", visible: false)
 
-      selectize_input = page.find("div.user_unconfirmed_wca_id .selectize-control input")
-      selectize_input.native.send_key(person.wca_id)
-      # Wait for selectize popup to appear.
-      expect(page).to have_selector("div.selectize-dropdown", visible: true)
-      # Select item with selectize.
-      page.find("div.user_unconfirmed_wca_id input").native.send_key(:return)
+      fill_in_selectize "WCA ID", with: person.wca_id
 
       # Wait for select delegate area to load via ajax.
       expect(page.find("#select-nearby-delegate-area")).to have_content "In order to assign you your WCA ID"
 
       # Now that they've selected a valid WCA ID, make sure the birthdate
       # verification field is visible.
-      expect(page.find("div.user_dob_verification", visible: true).visible?).to eq true
+      expect(page).to have_selector("div.user_dob_verification", visible: true)
 
       delegate = person.competitions.first.delegates.first
       choose("user_delegate_id_to_handle_wca_id_claim_#{delegate.id}")
@@ -81,6 +77,60 @@ RSpec.feature "Sign up" do
       click_button "Sign up"
 
       expect(page).to have_selector('#have-competed', visible: true)
+    end
+
+    it "remembers their selected wca id on validation error" do
+      visit "/users/sign_up"
+      click_on "I have competed in a WCA competition."
+      # They have not selected a valid WCA ID yet, so don't show the birthdate verification
+      # field.
+      expect(page).to have_selector("div.user_dob_verification", visible: false)
+
+      fill_in_selectize "WCA ID", with: person.wca_id
+
+      # Wait for select delegate area to load via ajax.
+      expect(page.find("#select-nearby-delegate-area")).to have_content "In order to assign you your WCA ID"
+
+      # Now that they've selected a valid WCA ID, make sure the birthdate
+      # verification field is visible.
+      expect(page).to have_selector("div.user_dob_verification", visible: true)
+
+      # Submit the form without selecting a delegate.
+      click_button "Sign up"
+
+      expect(page).to have_selector('#have-competed', visible: true)
+      expect(page).to have_selector("div.user_dob_verification", visible: true)
+    end
+
+    it "remembers their selected wca id and custom delegate on validation error" do
+      visit "/users/sign_up"
+      click_on "I have competed in a WCA competition."
+      # They have not selected a valid WCA ID yet, so don't show the birthdate verification
+      # field.
+      expect(page).to have_selector("div.user_dob_verification", visible: false)
+
+      fill_in_selectize "WCA ID", with: person.wca_id
+
+      # Wait for select delegate area to load via ajax.
+      expect(page.find("#select-nearby-delegate-area")).to have_content "In order to assign you your WCA ID"
+
+      # Now that they've selected a valid WCA ID, make sure the birthdate
+      # verification field is visible.
+      expect(page).to have_selector("div.user_dob_verification", visible: true)
+
+      # Select a custom delegate.
+      selectize = page.find("#nearby-delegate-search + div.selectize-control")
+      fill_in_selectize selectize, with: custom_delegate.wca_id
+
+      click_button "Sign up"
+
+      # Verify that the custom delegate is still selected.
+      selectize_items = selectize.all("div.selectize-control .items")
+      expect(selectize_items.length).to eq 1
+      expect(selectize_items[0].find('.name').text).to eq custom_delegate.name
+
+      expect(page).to have_selector('#have-competed', visible: true)
+      expect(page).to have_selector("div.user_dob_verification", visible: true)
     end
   end
 
@@ -131,18 +181,13 @@ RSpec.feature "Sign up" do
       fill_in "user[password_confirmation]", with: "wca"
 
       click_on "I have competed in a WCA competition."
-      selectize_input = page.find("div.user_unconfirmed_wca_id .selectize-control input")
-      selectize_input.native.send_key(person.wca_id)
-      # Wait for selectize popup to appear.
-      expect(page).to have_selector("div.selectize-dropdown", visible: true)
-      # Select item with selectize.
-      page.find("div.user_unconfirmed_wca_id input").native.send_key(:return)
+      fill_in_selectize "WCA ID", with: person.wca_id
 
       # Wait for select delegate area to load via ajax.
       expect(page.find("#select-nearby-delegate-area")).to have_content "In order to assign you your WCA ID"
       # Now that they've selected a valid WCA ID, make sure the birthdate
       # verification field is visible.
-      expect(page.find("div.user_dob_verification", visible: true).visible?).to eq true
+      expect(page).to have_selector("div.user_dob_verification", visible: true)
       delegate = person.competitions.first.delegates.first
       choose("user_delegate_id_to_handle_wca_id_claim_#{delegate.id}")
       # Now enter the wrong birthdate.
@@ -188,12 +233,7 @@ RSpec.feature "Sign up" do
       fill_in "user[password_confirmation]", with: "wca"
 
       click_on "I have competed in a WCA competition."
-      selectize_input = page.find("div.user_unconfirmed_wca_id .selectize-control input")
-      selectize_input.native.send_key(person.wca_id)
-      # Wait for selectize popup to appear.
-      expect(page).to have_selector("div.selectize-dropdown", visible: true)
-      # Select item with selectize.
-      page.find("div.user_unconfirmed_wca_id input").native.send_key(:return)
+      fill_in_selectize "WCA ID", with: person.wca_id
 
       click_button "Sign up"
       click_on "I have never competed in a WCA competition."

@@ -17,10 +17,31 @@ class User < ApplicationRecord
   has_many :teams, -> { distinct }, through: :team_members
   has_many :current_team_members, -> { current }, class_name: "TeamMember"
   has_many :current_teams, -> { distinct }, through: :current_team_members, source: :team
-  has_many :users_claiming_wca_id, foreign_key: "delegate_id_to_handle_wca_id_claim", class_name: "User"
+  has_many :confirmed_users_claiming_wca_id, -> { confirmed_email }, foreign_key: "delegate_id_to_handle_wca_id_claim", class_name: "User"
   has_many :oauth_applications, class_name: 'Doorkeeper::Application', as: :owner
   has_many :user_preferred_events, dependent: :destroy
   has_many :preferred_events, through: :user_preferred_events, source: :event
+
+  scope :confirmed_email, -> { where.not(confirmed_at: nil) }
+
+  scope :in_region, lambda { |region_id|
+    unless region_id.blank? || region_id == 'all'
+      where(country_iso2: (Continent.country_iso2s(region_id) || Country.c_find(region_id)&.iso2))
+    end
+  }
+
+  def self.eligible_voters
+    team_leaders = TeamMember.current.where(team_leader: true).map(&:user)
+    eligible_delegates = User.where(delegate_status: %w(delegate senior_delegate))
+    board_members = TeamMember.current.where(team_id: Team.board.id).map(&:user)
+    (team_leaders + eligible_delegates + board_members).uniq
+  end
+
+  def self.leader_senior_voters
+    team_leaders = TeamMember.current.where(team_leader: true).map(&:user)
+    senior_delegates = User.where(delegate_status: "senior_delegate")
+    (team_leaders + senior_delegates).uniq
+  end
 
   accepts_nested_attributes_for :user_preferred_events, allow_destroy: true
 
@@ -35,7 +56,7 @@ class User < ApplicationRecord
   # name empty, so long as they're a returning competitor and are claiming their
   # wca id.
   validates :name, presence: true, if: -> { !claiming_wca_id }
-  WCA_ID_RE = /\A(|\d{4}[A-Z]{4}\d{2})\z/
+  WCA_ID_RE = /\A(|\d{4}[A-Z]{4}\d{2})\z/.freeze
   validates :wca_id, format: { with: WCA_ID_RE }, allow_nil: true
   validates :unconfirmed_wca_id, format: { with: WCA_ID_RE }, allow_nil: true
   WCA_ID_MAX_LENGTH = 10
@@ -51,9 +72,9 @@ class User < ApplicationRecord
   enum gender: (ALLOWABLE_GENDERS.map { |g| [g, g.to_s] }.to_h)
   GENDER_LABEL_METHOD = lambda do |g|
     {
-      m: I18n.t('wca.devise.gender.male'),
-      f: I18n.t('wca.devise.gender.female'),
-      o: I18n.t('wca.devise.gender.other_gender'),
+      m: I18n.t('enums.user.gender.m'),
+      f: I18n.t('enums.user.gender.f'),
+      o: I18n.t('enums.user.gender.o'),
     }[g]
   end
 
@@ -61,7 +82,6 @@ class User < ApplicationRecord
     candidate_delegate: "candidate_delegate",
     delegate: "delegate",
     senior_delegate: "senior_delegate",
-    board_member: "board_member",
   }
   has_many :subordinate_delegates, class_name: "User", foreign_key: "senior_delegate_id"
   belongs_to :senior_delegate, -> { where(delegate_status: "senior_delegate").order(:name) }, class_name: "User"
@@ -72,7 +92,12 @@ class User < ApplicationRecord
       user = User.find_by_wca_id(wca_id)
       # If there is a non dummy user with this WCA ID, fail validation.
       if user && !user.dummy_account?
-        errors.add(:wca_id, I18n.t('users.errors.unique'))
+        errors.add(
+          :wca_id,
+          I18n.t('users.errors.unique',
+                 used_name: user.name,
+                 used_email: user.email),
+        )
       end
     end
   end
@@ -98,7 +123,7 @@ class User < ApplicationRecord
     end
   end
 
-  attr_accessor :claiming_wca_id
+  attr_reader :claiming_wca_id
   def claiming_wca_id=(claiming_wca_id)
     @claiming_wca_id = ActiveRecord::Type::Boolean.new.cast(claiming_wca_id)
   end
@@ -165,7 +190,9 @@ class User < ApplicationRecord
     wca_id.present? && encrypted_password.blank? && email.casecmp("#{wca_id}@worldcubeassociation.org") == 0
   end
 
+  scope :candidate_delegates, -> { where(delegate_status: "candidate_delegate") }
   scope :delegates, -> { where.not(delegate_status: nil) }
+  scope :senior_delegates, -> { where(delegate_status: "senior_delegate") }
 
   before_validation :copy_data_from_persons
   def copy_data_from_persons
@@ -184,7 +211,7 @@ class User < ApplicationRecord
     if p
       cannot_be_assigned_reasons = p.cannot_be_assigned_to_user_reasons
       unless cannot_be_assigned_reasons.empty?
-        errors.add(:wca_id, cannot_be_assigned_reasons.to_sentence)
+        errors.add(:wca_id, cannot_be_assigned_reasons.xss_aware_to_sentence)
       end
     end
   end
@@ -280,30 +307,24 @@ class User < ApplicationRecord
 
   validate :senior_delegate_presence
   def senior_delegate_presence
-    if !User.delegate_status_allows_senior_delegate(delegate_status) && senior_delegate
+    if !User.delegate_status_requires_senior_delegate(delegate_status) && senior_delegate
       errors.add(:senior_delegate, I18n.t('users.errors.must_not_be_present'))
     end
   end
 
-  def self.delegate_status_allows_senior_delegate(delegate_status)
+  validates :senior_delegate, presence: true, if: -> { User.delegate_status_requires_senior_delegate(delegate_status) && !senior_delegate }
+
+  # This is a copy of def self.delegate_status_requires_senior_delegate(delegate_status) in the user model
+  # https://github.com/thewca/worldcubeassociation.org/blob/master/WcaOnRails/app/assets/javascripts/users.js#L3-L11
+  # It is necessary to fix both files for changes to work
+  def self.delegate_status_requires_senior_delegate(delegate_status)
     {
       nil => false,
       "" => false,
       "candidate_delegate" => true,
       "delegate" => true,
       "senior_delegate" => false,
-      "board_member" => false,
     }.fetch(delegate_status)
-  end
-
-  validate :not_illegally_demoting_oneself
-  def not_illegally_demoting_oneself
-    about_to_lose_access = !board_member?
-    if current_user == self && about_to_lose_access
-      if delegate_status_was == "board_member"
-        errors.add(:delegate_status, I18n.t('users.errors.board_member_cannot_resign'))
-      end
-    end
   end
 
   validate :avatar_requires_wca_id
@@ -315,13 +336,20 @@ class User < ApplicationRecord
 
   after_save :remove_pending_wca_id_claims
   private def remove_pending_wca_id_claims
-    if delegate_status_changed? && !delegate_status
-      users_claiming_wca_id.each do |user|
-        user.update delegate_id_to_handle_wca_id_claim: nil, unconfirmed_wca_id: nil
-        senior_delegate = User.find_by_id(senior_delegate_id_was)
+    if saved_change_to_delegate_status? && !delegate_status
+      confirmed_users_claiming_wca_id.each do |user|
+        senior_delegate = User.find_by_id(senior_delegate_id_before_last_save)
         WcaIdClaimMailer.notify_user_of_delegate_demotion(user, self, senior_delegate).deliver_later
       end
+      # Clear all pending WCA IDs claims for the demoted Delegate
+      User.where(delegate_to_handle_wca_id_claim: self.id).update_all(delegate_id_to_handle_wca_id_claim: nil, unconfirmed_wca_id: nil)
     end
+  end
+
+  # This method was copied and overridden from https://github.com/plataformatec/devise/blob/master/lib/devise/models/confirmable.rb#L182
+  # to enable separate emails for sign-up and email reconfirmation
+  def send_on_create_confirmation_instructions
+    NewRegistrationMailer.send_registration_mail(self).deliver_now
   end
 
   # After the user confirms their account, if they claimed a WCA ID, now is the
@@ -347,36 +375,52 @@ class User < ApplicationRecord
     preferred_locale || I18n.default_locale
   end
 
+  def board_member?
+    team_member?(Team.board)
+  end
+
   def software_team?
-    team_member?('wst')
+    team_member?(Team.wst)
   end
 
   def results_team?
-    team_member?('wrt')
+    team_member?(Team.wrt)
   end
 
   def wrc_team?
-    team_member?('wrc')
+    team_member?(Team.wrc)
   end
 
   def wdc_team?
-    team_member?('wdc')
+    team_member?(Team.wdc)
   end
 
   def communication_team?
-    team_member?('wct')
+    team_member?(Team.wct)
   end
 
-  def team_member?(team_friendly_id)
-    self.current_team_members.where(team_id: Team.find_by_friendly_id!(team_friendly_id).id).count > 0
+  def ethics_committee?
+    team_member?(Team.wec)
   end
 
-  def team_leader?(team_friendly_id)
-    self.current_team_members.where(team_id: Team.find_by_friendly_id!(team_friendly_id).id, team_leader: true).count > 0
+  def quality_assurance_committee?
+    team_member?(Team.wqac)
+  end
+
+  def competition_announcement_team?
+    team_member?(Team.wcat)
+  end
+
+  def team_member?(team)
+    self.current_team_members.select { |t| t.team_id == team.id }.count > 0
+  end
+
+  def team_leader?(team)
+    self.current_team_members.select { |t| t.team_id == team.id && t.team_leader }.count > 0
   end
 
   def teams_where_is_leader
-    self.current_team_members.where(team_leader: true).map(&:team).uniq
+    self.current_team_members.select(&:team_leader).map(&:team).uniq
   end
 
   def admin?
@@ -387,8 +431,16 @@ class User < ApplicationRecord
     delegate_status.present?
   end
 
+  def senior_delegate?
+    delegate_status == "senior_delegate"
+  end
+
   def can_view_all_users?
-    admin? || board_member? || results_team? || communication_team? || any_kind_of_delegate?
+    admin? || board_member? || results_team? || communication_team? || wdc_team? || any_kind_of_delegate?
+  end
+
+  def can_view_senior_delegate_material?
+    admin? || board_member? || senior_delegate?
   end
 
   def can_edit_user?(user)
@@ -400,7 +452,7 @@ class User < ApplicationRecord
   end
 
   def can_change_users_avatar?(user)
-    user.wca_id.present? && self.editable_fields_of_user(user).include?(:pending_avatar)
+    user.wca_id.present? && self.editable_fields_of_user(user).include?(:remove_avatar)
   end
 
   def organizer_for?(user)
@@ -419,7 +471,7 @@ class User < ApplicationRecord
 
   # Returns true if the user can edit the given team.
   def can_edit_team?(team)
-    can_manage_teams? || team_leader?(team.friendly_id)
+    can_manage_teams? || team_leader?(team)
   end
 
   def can_create_competitions?
@@ -427,23 +479,29 @@ class User < ApplicationRecord
   end
 
   def can_view_crash_course?
-    admin? || board_member? || any_kind_of_delegate? || results_team? || wdc_team? || wrc_team? || communication_team?
+    can_view_delegate_matters? || communication_team?
   end
 
   def can_create_posts?
-    admin? || board_member? || results_team? || wdc_team? || wrc_team? || communication_team?
+    admin? || board_member? || results_team? || wdc_team? || wrc_team? || communication_team? || can_announce_competitions?
   end
 
   def can_update_crash_course?
-    admin? || board_member? || results_team?
+    admin? || board_member? || results_team? || quality_assurance_committee?
   end
 
+  def can_admin_competitions?
+    can_admin_results? || competition_announcement_team?
+  end
+
+  alias_method :can_announce_competitions?, :can_admin_competitions?
+
   def can_manage_competition?(competition)
-    can_admin_results? || competition.organizers.include?(self) || competition.delegates.include?(self) || wrc_team?
+    can_admin_competitions? || competition.organizers.include?(self) || competition.delegates.include?(self) || wrc_team? || competition.delegates.map(&:senior_delegate).compact.include?(self)
   end
 
   def can_view_hidden_competitions?
-    can_admin_results? || self.any_kind_of_delegate?
+    can_admin_competitions? || self.any_kind_of_delegate?
   end
 
   def can_edit_registration?(registration)
@@ -457,17 +515,43 @@ class User < ApplicationRecord
     can_admin_results? || competition.delegates.include?(self)
   end
 
+  def can_add_and_remove_events?(competition)
+    can_admin_competitions? || (can_manage_competition?(competition) && !competition.confirmed?)
+  end
+
+  def can_submit_competition_results?(competition)
+    appropriate_role = can_admin_results? || competition.delegates.include?(self)
+    appropriate_time = competition.in_progress? || competition.is_probably_over?
+    appropriate_role && appropriate_time && !competition.results_posted?
+  end
+
   def can_create_poll?
-    admin? || board_member? || wrc_team? || wdc_team?
+    admin? || board_member? || wrc_team? || wdc_team? || quality_assurance_committee?
   end
 
   def can_vote_in_poll?
     admin? || results_team? || any_kind_of_delegate? || wrc_team?
   end
 
+  def can_view_delegate_matters?
+    any_kind_of_delegate? || can_admin_results? || wrc_team? || wdc_team? || quality_assurance_committee? || competition_announcement_team?
+  end
+
+  def can_manage_incidents?
+    admin? || wrc_team?
+  end
+
+  def can_view_incident_private_sections?(incident)
+    if incident.resolved?
+      can_view_delegate_matters?
+    else
+      can_manage_incidents?
+    end
+  end
+
   def can_view_delegate_report?(delegate_report)
     if delegate_report.posted?
-      any_kind_of_delegate? || can_admin_results? || wrc_team? || wdc_team?
+      can_view_delegate_matters?
     else
       delegate_report.competition.delegates.include?(self) || can_admin_results?
     end
@@ -479,7 +563,15 @@ class User < ApplicationRecord
   end
 
   def can_see_admin_competitions?
-    board_member? || senior_delegate? || admin?
+    board_member? || senior_delegate? || admin? || quality_assurance_committee? || competition_announcement_team?
+  end
+
+  def can_approve_media?
+    admin? || communication_team?
+  end
+
+  def can_see_eligible_voters?
+    can_admin_results? || team_leader?(Team.wec)
   end
 
   def get_cannot_delete_competition_reason(competition)
@@ -488,7 +580,7 @@ class User < ApplicationRecord
       I18n.t('competitions.errors.cannot_manage')
     elsif competition.showAtAll
       I18n.t('competitions.errors.cannot_delete_public')
-    elsif competition.isConfirmed && !self.can_admin_results?
+    elsif competition.confirmed? && !self.can_admin_results?
       I18n.t('competitions.errors.cannot_delete_confirmed')
     else
       nil
@@ -533,7 +625,8 @@ class User < ApplicationRecord
   def editable_fields_of_user(user)
     fields = Set.new
     if user.dummy_account?
-      return fields
+      # That's the only field we want to be able to edit for these accounts
+      return %i(remove_avatar)
     end
     if user == self
       fields += %i(
@@ -542,7 +635,7 @@ class User < ApplicationRecord
       )
       fields << { user_preferred_events_attributes: [:id, :event_id, :_destroy] }
     end
-    if admin? || board_member?
+    if admin? || board_member? || senior_delegate?
       fields += %i(delegate_status senior_delegate_id region)
     end
     if user.any_kind_of_delegate?
@@ -559,7 +652,7 @@ class User < ApplicationRecord
         avatar avatar_cache
       )
     end
-    if user == self || admin? || any_kind_of_delegate?
+    if user == self || admin? || any_kind_of_delegate? || results_team?
       cannot_edit_data = !!cannot_edit_data_reason_html(user)
       if !cannot_edit_data
         fields += %i(name dob gender country_iso2)
@@ -612,9 +705,9 @@ class User < ApplicationRecord
   end
 
   def self.search(query, params: {})
-    users = Person.includes(:user)
+    users = Person.includes(:user).current
     unless ActiveRecord::Type::Boolean.new.cast(params[:persons_table])
-      users = User.where.not(confirmed_at: nil).not_dummy_account
+      users = User.confirmed_email.not_dummy_account
 
       if ActiveRecord::Type::Boolean.new.cast(params[:only_delegates])
         users = users.where.not(delegate_status: nil)
@@ -678,25 +771,56 @@ class User < ApplicationRecord
     json
   end
 
-  def to_wcif(competition, registration = nil)
+  def to_wcif(competition, registration = nil, registrant_id = nil)
     person_pb = [person&.ranksAverage, person&.ranksSingle].compact.flatten
+    roles = registration&.roles || []
+    roles << "delegate" if competition.delegates.include?(self)
+    roles << "organizer" if competition.organizers.include?(self)
     {
       "name" => name,
       "wcaUserId" => id,
       "wcaId" => wca_id,
-      "delegatesCompetition" => competition.delegates.include?(self),
-      "organizesCompetition" => competition.organizers.include?(self),
+      "registrantId" => registrant_id,
+      "countryIso2" => country_iso2,
       "gender" => gender,
       # /wcif is restricted to users who can manage the competition,
       # we can include private data
       "birthdate" => dob.to_s,
       "email" => email,
-      "registration" => registration,
+      "registration" => registration&.to_wcif,
       "avatar" => {
         "url" => avatar.url,
         "thumbUrl" => avatar.url(:thumb),
       },
+      "roles" => roles,
       "personalBests" => person_pb.map(&:to_wcif),
+    }
+  end
+
+  def self.wcif_json_schema
+    {
+      "type" => "object",
+      "properties" => {
+        "registrantId" => { "type" => "integer" },
+        "name" => { "type" => "string" },
+        "wcaUserId" => { "type" => "integer" },
+        "wcaId" => { "type" => "string" },
+        "countryIso2" => { "type" => "string" },
+        "gender" => { "type" => "string", "enum" => %w(m f o) },
+        "birthdate" => { "type" => "string" },
+        "email" => { "type" => "string" },
+        "avatar" => {
+          "type" => ["object", "null"],
+          "properties" => {
+            "url" => { "type" => "string" },
+            "thumbUrl" => { "type" => "string" },
+          },
+        },
+        "roles" => { "type" => "array", "items" => { "type" => "string" } },
+        "registration" => Registration.wcif_json_schema,
+        "assignments" => { "type" => "object" }, # TODO: expand on this,
+        "personalBests" => { "type" => "array", "items" => PersonalBest.wcif_json_schema },
+      },
     }
   end
 

@@ -4,41 +4,22 @@ require 'rails_helper'
 
 RSpec.describe DelegateReport do
   it "factory makes a valid delegate report" do
-    dr = FactoryGirl.create :delegate_report
+    dr = FactoryBot.create :delegate_report
     expect(dr).to be_valid
   end
 
-  it "validates urls" do
-    valid_urls = [
-      'http://www.google.com',
-      'https://www.google.com',
-    ]
-    invalid_urls = [
-      'https://',
-      'http://',
-      'http://www.google.com ',
-      ' http://www.google.com',
-      'http://www. google.com',
-      'foo.com',
-      "bar",
-    ]
+  it "expects schedule_url to be a url" do
+    dr = FactoryBot.build :delegate_report, schedule_url: "i am clearly not a url", discussion_url: nil
+    expect(dr).to be_invalid_with_errors schedule_url: ["must be a valid url starting with http:// or https://"]
+  end
 
-    valid_urls.each do |valid_url|
-      dr = FactoryGirl.build :delegate_report, schedule_url: valid_url, discussion_url: valid_url
-      expect(dr).to be_valid
-    end
-
-    invalid_urls.each do |invalid_url|
-      dr = FactoryGirl.build :delegate_report, schedule_url: invalid_url, discussion_url: nil
-      expect(dr).to be_invalid
-
-      dr = FactoryGirl.build :delegate_report, schedule_url: nil, discussion_url: invalid_url
-      expect(dr).to be_invalid
-    end
+  it "expects discussion_url to be a url" do
+    dr = FactoryBot.build :delegate_report, schedule_url: nil, discussion_url: "i am clearly not a url"
+    expect(dr).to be_invalid_with_errors discussion_url: ["must be a valid url starting with http:// or https://"]
   end
 
   it "schedule_url is not required when posted" do
-    dr = FactoryGirl.build :delegate_report, schedule_url: nil
+    dr = FactoryBot.build :delegate_report, schedule_url: nil
     expect(dr).to be_valid
 
     dr.posted = true
@@ -49,16 +30,16 @@ RSpec.describe DelegateReport do
   end
 
   it "discussion_url is set on creation" do
-    dr = FactoryGirl.create :delegate_report
-    expect(dr.discussion_url).to eq "https://groups.google.com/forum/#!topicsearchin/wca-delegates/" + URI.encode(dr.competition.name)
+    dr = FactoryBot.create :delegate_report
+    expect(dr.discussion_url).to eq "https://groups.google.com/a/worldcubeassociation.org/forum/#!topicsearchin/reports/" + URI.encode_www_form_component(dr.competition.name)
   end
 
   context "can_view_delegate_report?" do
-    let(:other_delegate) { FactoryGirl.create :delegate }
-    let(:board_member) { FactoryGirl.create :board_member }
+    let(:other_delegate) { FactoryBot.create :delegate }
+    let(:board_member) { FactoryBot.create :user, :board_member }
 
     context "past competition" do
-      let(:competition) { FactoryGirl.create :competition, :with_delegate, starts: 1.week.ago }
+      let(:competition) { FactoryBot.create :competition, :with_delegate, starts: 1.week.ago }
       let(:delegate) { competition.delegates.first }
 
       it "cannot view delegate report with unposted report" do
@@ -81,7 +62,7 @@ RSpec.describe DelegateReport do
     end
 
     context "upcoming competition" do
-      let(:competition) { FactoryGirl.create :competition, :with_delegate, starts: 1.week.from_now }
+      let(:competition) { FactoryBot.create :competition, :with_delegate, starts: 1.week.from_now }
       let(:delegate) { competition.delegates.first }
 
       it "cannot view delegate report with unposted report" do

@@ -3,7 +3,7 @@
 # This file is copied to spec/ when you run 'rails generate rspec:install'
 ENV['RAILS_ENV'] ||= 'test'
 require 'spec_helper'
-require File.expand_path('../../config/environment', __FILE__)
+require File.expand_path('../config/environment', __dir__)
 require 'rspec/rails'
 # Add additional requires below this line. Rails is not loaded until this point!
 
@@ -31,7 +31,14 @@ Dir[Rails.root.join('spec/support/**/*.rb')].each { |f| require f }
 # If you are not using ActiveRecord, you can remove this line.
 ActiveRecord::Migration.maintain_test_schema!
 
+# To debug feature specs using phantomjs, set `Capybara.javascript_driver = :poltergeist_debug`
+# and then call `page.driver.debug` in your feature spec.
+Capybara.register_driver :poltergeist_debug do |app|
+  Capybara::Poltergeist::Driver.new(app, inspector: true, phantomjs: Phantomjs.path, debug: true)
+end
+
 Capybara.javascript_driver = :poltergeist
+Capybara.server = :webrick
 
 RSpec.configure do |config|
   # We're using database_cleaner instead of rspec-rails's implicit wrapping of
@@ -55,11 +62,13 @@ RSpec.configure do |config|
   # https://relishapp.com/rspec/rspec-rails/docs
   config.infer_spec_type_from_file_location!
 
-  # Make sign_in helper available in feature specs
+  # Make helpers available in feature specs
   config.include SessionHelper, type: :feature
+  config.include SelectizeHelper, type: :feature
 
-  # Make sign_in helper available in controller specs
-  config.include ApiSignInControllerHelper, type: :controller
+  # Make sign_in helper available in controller and request specs
+  config.include ApiSignInHelper, type: :controller
+  config.include ApiSignInHelper, type: :request
 
   config.include ApplicationHelper
 

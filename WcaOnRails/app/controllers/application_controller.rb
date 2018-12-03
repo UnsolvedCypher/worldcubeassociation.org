@@ -22,7 +22,7 @@ class ApplicationController < ActionController::Base
     # If the locale for the session is not set, we want to infer it from the following sources:
     #  - the current user preferred locale
     #  - the Accept-Language http header
-    session[:locale] ||= current_user&.preferred_locale || http_accept_language.preferred_language_from(I18n.available_locales)
+    session[:locale] ||= current_user&.preferred_locale || http_accept_language.language_region_compatible_from(I18n.available_locales)
     I18n.locale = session[:locale] || I18n.default_locale
 
     @@locale_counts ||= Hash.new(0)
@@ -43,7 +43,7 @@ class ApplicationController < ActionController::Base
     else
       flash[:danger] = I18n.t('users.update_locale.unavailable')
     end
-    redirect_to request.referer || root_path
+    redirect_to params[:current_url] || root_path
   end
 
   # https://github.com/doorkeeper-gem/doorkeeper/wiki/Customizing-the-response-body-when-unauthorized

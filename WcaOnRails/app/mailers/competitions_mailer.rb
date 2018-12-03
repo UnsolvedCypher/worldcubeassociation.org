@@ -1,17 +1,70 @@
 # frozen_string_literal: true
 
+require 'fileutils'
+
 class CompetitionsMailer < ApplicationMailer
+  include MailersHelper
   helper :markdown
 
-  def notify_board_of_confirmed_competition(confirmer, competition)
+  def notify_wcat_of_confirmed_competition(confirmer, competition)
+    I18n.with_locale :en do
+      @competition = competition
+      @confirmer = confirmer
+      mail(
+        to: Team.wcat.email,
+        cc: competition.delegates.flat_map { |d| [d.email, d.senior_delegate&.email] }.compact.uniq,
+        reply_to: confirmer.email,
+        subject: "#{confirmer.name} just confirmed #{competition.name}",
+      )
+    end
+  end
+
+  def notify_organizers_of_confirmed_competition(confirmer, competition)
     @competition = competition
     @confirmer = confirmer
-    mail(
-      to: "board@worldcubeassociation.org",
-      cc: competition.delegates.pluck(:email),
-      reply_to: confirmer.email,
-      subject: "#{confirmer.name} just confirmed #{competition.name}",
-    )
+    if @competition.organizers.empty?
+      nil
+    else
+      localized_mail I18n.locale,
+                     -> { I18n.t('users.mailer.competition_submission_email.header', delegate_name: confirmer.name, competition: competition.name) },
+                     to: competition.organizers.pluck(:email),
+                     reply_to: competition.delegates.pluck(:email)
+    end
+  end
+
+  def notify_organizers_of_announced_competition(competition, post)
+    @competition = competition
+    @post = post
+    if @competition.organizers.empty?
+      nil
+    else
+      localized_mail I18n.locale,
+                     -> { I18n.t('users.mailer.competition_announcement_email.header', competition: competition.name) },
+                     to: competition.organizers.pluck(:email),
+                     reply_to: competition.delegates.pluck(:email)
+    end
+  end
+
+  def notify_organizer_of_addition_to_competition(confirmer, competition, organizer)
+    @competition = competition
+    @confirmer = confirmer
+    @organizer = organizer
+
+    localized_mail I18n.locale,
+                   -> { I18n.t('users.mailer.organizer_addition_email.header', competition: competition.name) },
+                   to: organizer.email,
+                   reply_to: competition.delegates.pluck(:email)
+  end
+
+  def notify_organizer_of_removal_from_competition(remover, competition, organizer)
+    @competition = competition
+    @remover = remover
+    @organizer = organizer
+
+    localized_mail I18n.locale,
+                   -> { I18n.t('users.mailer.organizer_removal_email.header', competition: competition.name) },
+                   to: organizer.email,
+                   reply_to: competition.delegates.pluck(:email)
   end
 
   def notify_users_of_results_presence(user, competition)
@@ -37,7 +90,7 @@ class CompetitionsMailer < ApplicationMailer
     I18n.with_locale :en do
       @competition = competition
       mail(
-        to: "delegates@worldcubeassociation.org",
+        to: "reports@worldcubeassociation.org",
         cc: competition.delegates.pluck(:email),
         reply_to: competition.delegates.pluck(:email),
         subject: "[wca-report] [#{competition.continent.name}] #{competition.name}",
@@ -49,7 +102,7 @@ class CompetitionsMailer < ApplicationMailer
     @competition = competition
     mail(
       to: competition.delegates.pluck(:email),
-      cc: "results@worldcubeassociation.org",
+      cc: ["results@worldcubeassociation.org"] + delegates_to_senior_delegates_email(competition.delegates),
       reply_to: "results@worldcubeassociation.org",
       subject: "#{competition.name} Results",
     )
@@ -59,9 +112,27 @@ class CompetitionsMailer < ApplicationMailer
     @competition = competition
     mail(
       to: competition.delegates.pluck(:email),
-      cc: ["board@worldcubeassociation.org"] + competition.delegates.map { |delegate| delegate.senior_delegate&.email }.uniq.compact.flatten,
+      cc: ["board@worldcubeassociation.org"] + delegates_to_senior_delegates_email(competition.delegates),
       reply_to: "board@worldcubeassociation.org",
       subject: "#{competition.name} Delegate Report",
     )
+  end
+
+  def results_submitted(competition, results_submission, submitter_user)
+    @competition = competition
+    @results_submission = results_submission
+    @submitter_user = submitter_user
+    file_name = "Results_#{competition.id}_#{Time.now.utc.iso8601}.json"
+    attachments[file_name] = results_submission.results_json_str
+    mail(
+      to: "results@worldcubeassociation.org",
+      cc: competition.delegates.pluck(:email),
+      reply_to: competition.delegates.pluck(:email),
+      subject: "Results for #{competition.name}",
+    )
+  end
+
+  private def delegates_to_senior_delegates_email(delegates)
+    delegates.map { |delegate| delegate.senior_delegate&.email }.uniq.compact
   end
 end

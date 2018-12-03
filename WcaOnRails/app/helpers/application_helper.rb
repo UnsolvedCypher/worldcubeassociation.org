@@ -2,6 +2,7 @@
 
 module ApplicationHelper
   include MarkdownHelper
+  include MoneyRails::ActionViewExtension
 
   def full_title(page_title = '')
     base_title = WcaOnRails::Application.config.site_name
@@ -37,10 +38,6 @@ module ApplicationHelper
     link_to text, url, target: "_blank"
   end
 
-  def mail_to_wca_board
-    mail_to "board@worldcubeassociation.org", I18n.t("competitions.competition_form.board"), target: "_blank"
-  end
-
   def filename_to_url(filename)
     "/" + Pathname.new(File.absolute_path(filename)).relative_path_from(Rails.public_path).to_path
   end
@@ -53,12 +50,12 @@ module ApplicationHelper
   WCA_EXCERPT_RADIUS = 50
 
   def wca_excerpt(html, phrases)
-    text = ActiveSupport::Inflector.transliterate(strip_tags(html)) # TODO: https://github.com/thewca/worldcubeassociation.org/issues/238
+    text = strip_tags(html)
     # Compute the first and last index where query parts appear and use the whole text between them for excerpt.
-    text_downcase = text.downcase
-    first = phrases.map { |phrase| text_downcase.index(phrase.downcase) }.compact.min
+    search_in_me = ActiveSupport::Inflector.transliterate(text).downcase
+    first = phrases.map { |phrase| search_in_me.index(phrase.downcase) }.compact.min
     last = phrases.map do |phrase|
-      index = text_downcase.index(phrase.downcase)
+      index = search_in_me.index(phrase.downcase)
       index + phrase.length if index
     end.compact.max
     excerpted = if first # At least one phrase matches the text.
@@ -70,25 +67,31 @@ module ApplicationHelper
     wca_highlight(excerpted, phrases)
   end
 
-  def wca_highlight(html, phrases, do_not_transliterate: false)
-    text = if !do_not_transliterate
-             ActiveSupport::Inflector.transliterate(strip_tags(html)) # TODO: https://github.com/thewca/worldcubeassociation.org/issues/238
-           else
-             strip_tags(html)
-           end
-    highlight(text, phrases, highlighter: '<strong>\1</strong>')
+  def wca_highlight(html, phrases)
+    Translighterate.highlight(html, phrases, highlighter: '<strong>\1</strong>')
   end
 
   def wca_omni_search
-    text_field_tag nil, @omni_query, placeholder: "Search site", class: "form-control wca-autocomplete wca-autocomplete-omni wca-autocomplete-search wca-autocomplete-only_one wca-autocomplete-users_search wca-autocomplete-persons_table"
+    text_field_tag nil, @omni_query, placeholder: I18n.t('common.search_site'),
+                                     class: "form-control wca-autocomplete wca-autocomplete-omni wca-autocomplete-search wca-autocomplete-only_one wca-autocomplete-users_search wca-autocomplete-persons_table"
   end
 
   def wca_local_time(time)
     content_tag :span, "", class: "wca-local-time", data: { utc_time: time.in_time_zone.utc.iso8601, locale: I18n.locale }
   end
 
-  def wca_table(responsive: true, hover: true, striped: true, floatThead: true, table_class: "", data: {})
-    table_classes = "table wca-results table-condensed table-greedy-last-column #{table_class}"
+  def time_format_for_current_locale
+    case I18n.t("common.time_format")
+    when "12h"
+      "%I:%M %p"
+    else
+      "%H:%M"
+    end
+  end
+
+  def wca_table(responsive: true, hover: true, striped: true, floatThead: true, table_class: "", data: {}, greedy: true)
+    data[:locale] = I18n.locale
+    table_classes = "table table-condensed #{table_class}"
     if floatThead
       table_classes += " floatThead"
     end
@@ -97,6 +100,9 @@ module ApplicationHelper
     end
     if striped
       table_classes += " table-striped"
+    end
+    if greedy
+      table_classes += " table-greedy-last-column"
     end
 
     content_tag :div, class: (responsive ? "table-responsive" : "") do
@@ -140,13 +146,18 @@ module ApplicationHelper
     end.xss_aware_to_sentence
   end
 
+  def year_option_tags(selected_year: nil, exclude_future: true)
+    years = [[t('competitions.index.all_years'), 'all years']] + (exclude_future ? Competition.non_future_years : Competition.years)
+    options_for_select(years, selected_year)
+  end
+
   def region_option_tags(selected_id: nil, real_only: false)
     regions = {
-      t('common.continent') => Continent::ALL_SORTED_BY_LOCALE[I18n.locale].map { |continent| [continent.name, continent.id] },
+      t('common.continent') => Continent.all_sorted_by(I18n.locale, real: real_only).map { |continent| [continent.name, continent.id] },
       t('common.country') => Country.all_sorted_by(I18n.locale, real: real_only).map { |country| [country.name, country.id] },
     }
 
-    content_tag(:option, t('common.all_regions'), value: "all") + grouped_options_for_select(regions, selected_id)
+    options_for_select([[t('common.all_regions'), "all"]], selected_id) + grouped_options_for_select(regions, selected_id)
   end
 
   def simple_form_for(resource, options = {}, &block)
@@ -193,9 +204,13 @@ module ApplicationHelper
     content_tag :span, "", html_options
   end
 
-  def flag_icon(iso2, size, html_options = {})
+  def flag_icon(iso2, html_options = {})
     html_options[:class] ||= ""
-    html_options[:class] += " flag f#{size} #{iso2.downcase}"
+    html_options[:class] += " flag-icon flag-icon-#{iso2.downcase}"
     content_tag :span, "", html_options
+  end
+
+  def format_money(money)
+    "#{humanized_money_with_symbol(money)} (#{money.currency.name})"
   end
 end

@@ -1,4 +1,5 @@
 <% provide(:title, t('registrations.edit_registration.title', person: @registration.name, comp: @competition.name)) %>
+<% provide(:include_auto_numeric, true) %>
 
 <%= render layout: 'nav' do %>
   <%= horizontal_simple_form_for @registration, html: { class: 'are-you-sure' } do |f| %>
@@ -27,7 +28,7 @@
 
     <div class="form-group">
       <div class="col-sm-offset-2 col-sm-10">
-        <%= f.submit t('registrations.update'), class: "btn btn-default" %>
+        <%= f.submit t('registrations.update'), class: "btn btn-primary" %>
       </div>
     </div>
   <% end %>
@@ -38,10 +39,11 @@
       <% @registration.registration_payments.each do |payment| %>
         <p>
           <%= wca_local_time(payment.created_at) %>
-          <%= humanized_money_with_symbol payment.amount %>
+          <%= format_money payment.amount %>
           <% if payment.amount_available_for_refund > 0 %>
-            <%= form_tag registration_payment_refund_path(@registration, payment), method: :post do %>
-              <%= submit_tag t('registrations.refund'), class: "btn btn-warning" %>
+            <%= horizontal_simple_form_for :payment, url: registration_payment_refund_path(@registration, payment), html: { id: :form_refund } do |f| %>
+              <%= f.input :refund_amount, as: :money_amount, currency: payment.amount.currency.iso_code, value: payment.amount_available_for_refund, label: t('registrations.refund_form.labels.refund_amount'), hint: t('registrations.refund_form.hints.refund_amount') %>
+              <%= submit_tag t('registrations.refund'), class: "btn btn-warning", data: { confirm: t('registrations.refund_confirmation') } %>
             <% end %>
           <% end %>
         </p>

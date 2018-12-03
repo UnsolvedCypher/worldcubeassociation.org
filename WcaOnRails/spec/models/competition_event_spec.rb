@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe CompetitionEvent do
-  let(:competition) { FactoryGirl.create :competition, event_ids: %w(333 444) }
+  let(:competition) { FactoryBot.create :competition, event_ids: %w(333 444) }
   let(:competition_event) { competition.competition_events.find_by_event_id("333") }
 
   it "it's okay if there are no rounds yet" do
@@ -37,7 +37,7 @@ RSpec.describe CompetitionEvent do
   end
 
   def build_rounds(round_numbers)
-    competition_event.rounds_attributes = round_numbers.map { |n| { number: n, format_id: "a" } }
+    competition_event.rounds_attributes = round_numbers.map { |n| { number: n, format_id: "a", total_number_of_rounds: round_numbers.size } }
   end
 
   def mark_rounds_for_destruction(round_numbers)

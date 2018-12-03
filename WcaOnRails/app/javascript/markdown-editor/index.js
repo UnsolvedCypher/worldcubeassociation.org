@@ -4,8 +4,33 @@ import SimpleMDE from 'simplemde';
 // See https://github.com/NextStepWebs/simplemde-markdown-editor/issues/578.
 //import 'simplemde/src/css/simplemde.css';
 import 'simplemde/debug/simplemde.css';
+import './style.scss';
 
 $(function() {
+  function insertText(editor, markup, promptText) {
+    var cm = editor.codemirror;
+
+    var startPoint = cm.getCursor('start');
+    var endPoint = cm.getCursor('end');
+    var somethingSelected = cm.somethingSelected();
+
+    var text = (somethingSelected ? cm.getSelection() : prompt(promptText));
+
+    if(!text) {
+      return false;
+    }
+
+    cm.replaceSelection(markup.build(text));
+
+    if(somethingSelected) {
+      startPoint.ch += markup.start.length;
+      endPoint.ch += markup.start.length;
+      cm.setSelection(startPoint, endPoint);
+    }
+
+    cm.focus();
+  }
+
   $('.markdown-editor').each(function() {
     var editor = new SimpleMDE({
       element: this,
