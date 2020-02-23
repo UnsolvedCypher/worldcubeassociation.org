@@ -76,7 +76,7 @@ gem 'font-awesome-sass'
 gem 'lodash-rails'
 gem 'cocoon'
 gem 'momentjs-rails', github: 'derekprior/momentjs-rails'
-gem 'datetimepicker-rails', github: 'zpaulovics/datetimepicker-rails', branch: 'master', submodules: true
+gem 'bootstrap3-datetimepicker-rails'
 gem 'blocks'
 gem 'rack-cors', require: 'rack/cors'
 gem 'api-pagination'

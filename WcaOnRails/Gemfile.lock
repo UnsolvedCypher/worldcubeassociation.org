@@ -20,15 +20,6 @@ GIT
   specs:
     selectize-rails (0.12.1)
 
-GIT
-  remote: https://github.com/zpaulovics/datetimepicker-rails.git
-  revision: 36d21cec5da7f5b214925804f60e63c61c747023
-  branch: master
-  submodules: true
-  specs:
-    datetimepicker-rails (4.7.16)
-      momentjs-rails (>= 2.9.0)
-
 GEM
   remote: https://rubygems.org/
   specs:
@@ -118,6 +109,8 @@ GEM
       autoprefixer-rails (>= 5.2.1)
       sassc (>= 2.0.0)
     bootstrap-table-rails (1.11.1.1)
+    bootstrap3-datetimepicker-rails (4.17.47)
+      momentjs-rails (>= 2.8.1)
     builder (3.2.4)
     bullet (6.1.0)
       activesupport (>= 3.0.0)
@@ -630,6 +623,7 @@ DEPENDENCIES
   blocks
   bootstrap-sass
   bootstrap-table-rails
+  bootstrap3-datetimepicker-rails
   bullet
   byebug
   capybara
@@ -640,7 +634,6 @@ DEPENDENCIES
   coveralls
   daemons
   database_cleaner
-  datetimepicker-rails!
   delayed_job_active_record
   devise
   devise-bootstrap-views
